@@ -42,10 +42,13 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # x stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        data_new = Resize(spatial_size=[16, 64, 64])(data_new)
+
         rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[1]):
             temp = rand_affine_x(rot_data)
+            temp = Resize(spatial_size=[16, 64, 64])(temp)
             data_new[:, i, :, :] = temp[:, i, :, :]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_x_' +
@@ -55,10 +58,14 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        data_new = Resize(spatial_size=[64, 16, 64])(data_new)
+
         rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[2]):
             temp = rand_affine_y(rot_data)
+            temp = Resize(spatial_size=[64, 16, 64])(temp)
+
             data_new[:, :, i, :] = temp[:, :, i, :]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_y_' +
@@ -67,10 +74,14 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # z stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        data_new = Resize(spatial_size=[64, 64, 16])(data_new)
+
         rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[3]):
             temp = rand_affine_z(rot_data)
+            temp = Resize(spatial_size=[64, 64, 16])(temp)
+
             data_new[:, :, :, i] = temp[:, :, :, i]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_z_' +
