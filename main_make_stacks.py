@@ -2,14 +2,16 @@ import glob
 from monai.transforms import (
     LoadImage, RandAffine, SaveImage, Resize, EnsureChannelFirst, CropForeground
 )
-
-import torch
 import numpy as np
-from tqdm import tqdm
 from copy import deepcopy
 
 
 def make_slices(filename, num_stacks=3, output_dir='./'):
+
+    ''' rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2),
+                             rotate_range=(
+        np.pi / 16, np.pi / 16, np.pi / 16),
+        padding_mode="border")'''
 
     rand_affine_x = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1),
                                rotate_range=(
@@ -26,7 +28,7 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
                                    np.pi / 32, np.pi / 32, np.pi / 16),
                                padding_mode="border")
 
-    data, _ = LoadImage()(nii_name)
+    data, _ = LoadImage()(filename)
 
     data = CropForeground()(data)
     data = EnsureChannelFirst()(data)
@@ -38,6 +40,7 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # x stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        #rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[1]):
             temp = rand_affine_x(data_ds)
@@ -50,6 +53,7 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        #rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[2]):
             temp = rand_affine_y(data_ds)
@@ -61,6 +65,7 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # z stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
+        #rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[3]):
             temp = rand_affine_z(data_ds)
