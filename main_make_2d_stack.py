@@ -12,7 +12,17 @@ output_dir = '.'
 nii_name = '/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz'
 
 num_stacks = 3
-rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(1, 1, 1), 
+
+rand_affine_x = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), 
+    rotate_range=(np.pi / 16, np.pi /32, np.pi / 32), 
+    padding_mode="border")
+
+rand_affine_y = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), 
+    rotate_range=(np.pi / 32, np.pi /16, np.pi / 32), 
+    padding_mode="border")
+
+
+rand_affine_z = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), 
     rotate_range=(np.pi / 32, np.pi /32, np.pi / 16), 
     padding_mode="border")
     
@@ -24,16 +34,40 @@ data_ds = Resize(spatial_size=[64,64,64])(data)
 SaveImage(output_dir=output_dir,output_postfix='image')(data_ds)
 
 
+
+# x stacks
 for n in range(num_stacks):
     data_new = deepcopy(data_ds) #torch.zeros(data_ds.shape)
 
-    for i in tqdm(range(data_ds.shape[3])):
+    for i in tqdm(range(data_new.shape[1])):
+        temp = rand_affine_x(data_ds)
+        data_new[:,i,:,:] = temp[:,i,:,:]
 
-        temp = rand_affine(data_ds)
+
+    SaveImage(output_dir=output_dir,output_postfix='stack_x_'+str(n))(data_new)
+
+# y stacks
+
+for n in range(num_stacks):
+    data_new = deepcopy(data_ds) #torch.zeros(data_ds.shape)
+
+    for i in tqdm(range(data_new.shape[2])):
+        temp = rand_affine_y(data_ds)
+        data_new[:,:,i,:] = temp[:,:,i,:]
+
+
+    SaveImage(output_dir=output_dir,output_postfix='stack_y_'+str(n))(data_new)
+
+# z stacks
+for n in range(num_stacks):
+    data_new = deepcopy(data_ds) #torch.zeros(data_ds.shape)
+
+    for i in tqdm(range(data_new.shape[3])):
+        temp = rand_affine_z(data_ds)
         data_new[:,:,:,i] = temp[:,:,:,i]
 
 
-    SaveImage(output_dir=output_dir,output_postfix='stack_'+str(n))(data_new)
+    SaveImage(output_dir=output_dir,output_postfix='stack_z_'+str(n))(data_new)
 
 print('done')
 
