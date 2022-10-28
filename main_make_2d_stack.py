@@ -1,6 +1,6 @@
 from monai.transforms import (
     LoadImage, LoadImaged, EnsureChannelFirstd,
-    Resized, EnsureTyped, Compose,NormalizeIntensityd, RandAffined, RandAffine, SaveImage, Resize, EnsureChannelFirst
+    Resized, EnsureTyped, Compose,NormalizeIntensityd, RandAffined, RandAffine, SaveImage, Resize, EnsureChannelFirst, CropForeground
 )
 
 import torch
@@ -26,12 +26,13 @@ rand_affine_z = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .
     rotate_range=(np.pi / 32, np.pi /32, np.pi / 16), 
     padding_mode="border")
     
-data, meta = LoadImage()(nii_name)
+data, _ = LoadImage()(nii_name)
 
+data = CropForeground()(data)
 data = EnsureChannelFirst()(data)
 
 data_ds = Resize(spatial_size=[64,64,64])(data)
-SaveImage(output_dir=output_dir,output_postfix='image')(data_ds)
+SaveImage(output_dir=output_dir,output_postfix='image', resample=False)(data_ds)
 
 
 
@@ -44,7 +45,7 @@ for n in range(num_stacks):
         data_new[:,i,:,:] = temp[:,i,:,:]
 
 
-    SaveImage(output_dir=output_dir,output_postfix='stack_x_'+str(n))(data_new)
+    SaveImage(output_dir=output_dir,output_postfix='stack_x_'+str(n), resample=False)(data_new)
 
 # y stacks
 
@@ -56,7 +57,7 @@ for n in range(num_stacks):
         data_new[:,:,i,:] = temp[:,:,i,:]
 
 
-    SaveImage(output_dir=output_dir,output_postfix='stack_y_'+str(n))(data_new)
+    SaveImage(output_dir=output_dir,output_postfix='stack_y_'+str(n),resample=False)(data_new)
 
 # z stacks
 for n in range(num_stacks):
@@ -67,7 +68,7 @@ for n in range(num_stacks):
         data_new[:,:,:,i] = temp[:,:,:,i]
 
 
-    SaveImage(output_dir=output_dir,output_postfix='stack_z_'+str(n))(data_new)
+    SaveImage(output_dir=output_dir,output_postfix='stack_z_'+str(n),resample=False)(data_new)
 
 print('done')
 
