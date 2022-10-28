@@ -8,10 +8,10 @@ from copy import deepcopy
 
 def make_slices(filename, num_stacks=3, output_dir='./'):
 
-    ''' rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2),
+    rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2),
                              rotate_range=(
         np.pi / 16, np.pi / 16, np.pi / 16),
-        padding_mode="border")'''
+        padding_mode="border")
 
     rand_affine_x = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1),
                                rotate_range=(
@@ -29,9 +29,11 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
                                padding_mode="border")
 
     data, _ = LoadImage()(filename)
+    SaveImage(output_dir=output_dir,
+              output_postfix='orig', resample=False)(data)
+    data = EnsureChannelFirst()(data)
 
     data = CropForeground()(data)
-    data = EnsureChannelFirst()(data)
 
     data_ds = Resize(spatial_size=[64, 64, 64])(data)
     SaveImage(output_dir=output_dir, output_postfix='image',
@@ -40,10 +42,10 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # x stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
-        #rot_data = rand_affine(data_ds)
+        rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[1]):
-            temp = rand_affine_x(data_ds)
+            temp = rand_affine_x(rot_data)
             data_new[:, i, :, :] = temp[:, i, :, :]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_x_' +
@@ -53,10 +55,10 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
-        #rot_data = rand_affine(data_ds)
+        rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[2]):
-            temp = rand_affine_y(data_ds)
+            temp = rand_affine_y(rot_data)
             data_new[:, :, i, :] = temp[:, :, i, :]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_y_' +
@@ -65,10 +67,10 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
     # z stacks
     for n in range(num_stacks):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
-        #rot_data = rand_affine(data_ds)
+        rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[3]):
-            temp = rand_affine_z(data_ds)
+            temp = rand_affine_z(rot_data)
             data_new[:, :, :, i] = temp[:, :, :, i]
 
         SaveImage(output_dir=output_dir, output_postfix='stack_z_' +
@@ -79,7 +81,7 @@ if __name__ == '__main__':
 
     sublist = glob.glob('/deneb_disk/feta_2022/feta_2.2/sub*/*/*T2w.nii.gz')
     out_dir = './feta_syn_data'
-    # '/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz'
+    #sublist =['/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz']
 
     for nii_name in sublist:
 
