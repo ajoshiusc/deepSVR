@@ -29,8 +29,8 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
                                padding_mode="border")
 
     data, _ = LoadImage()(filename)
-    SaveImage(output_dir=output_dir,
-              output_postfix='orig', resample=False)(data)
+    '''SaveImage(output_dir=output_dir,
+              output_postfix='orig', resample=False)(data)'''
     data = EnsureChannelFirst()(data)
 
     data = CropForeground()(data)
