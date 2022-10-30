@@ -10,7 +10,6 @@ from os.path import split, splitext, join
 
 def make_slices_vols(filename, num_stacks=3, output_dir='./'):
 
-
     _, fname = split(filename)
     subname = splitext(fname)
 
@@ -25,61 +24,63 @@ def make_slices_vols(filename, num_stacks=3, output_dir='./'):
     SaveImage(output_dir=output_dir, output_postfix='image',
               resample=False)(data)
 
-    rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16), padding_mode="border",cache_grid=True)
-    rand_affine_grid = RandAffineGrid(translate_range=(2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16))
-    resample = Resample(mode=("bilinear"),padding_mode="border")
+    rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2), rotate_range=(
+        np.pi / 16, np.pi / 16, np.pi / 16), padding_mode="border", cache_grid=True)
+    rand_affine_grid = RandAffineGrid(translate_range=(
+        2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16))
+    resample = Resample(mode=("bilinear"), padding_mode="border")
     for n in range(num_stacks):
 
         data_new = rand_affine(data)
 
-        SaveImage(output_dir=output_dir, output_postfix='image_' +str(n), resample=False)(data_new)
-        slice_num = randrange(16)	
-        dim = randrange(3)        
+        SaveImage(output_dir=output_dir, output_postfix='image_' +
+                  str(n), resample=False)(data_new)
+        slice_num = randrange(16)
+        dim = randrange(3)
 
         if dim == 2:
             # downsample vol to slice res along slice axis
             data_new_ds = Resize(spatial_size=[64, 64, 16])(data_new)
             # generate rand number between 0-num slices and take slice of the vol. save it as h5 file
-            slice = data_new_ds[:,:,:,slice_num]
+            slice = data_new_ds[:, :, :, slice_num]
 
             # also generate 64^3 vol with 0 everywhere except at the slice locs save it
             temp = 0*deepcopy(data_new_ds)
-            temp[:,:,:,slice_num] = slice
+            temp[:, :, :, slice_num] = slice
         elif dim == 1:
             # downsample vol to slice res along slice axis
             data_new_ds = Resize(spatial_size=[64, 16, 64])(data_new)
             # generate rand number between 0-num slices and take slice of the vol. save it as h5 file
-            slice = data_new_ds[:,:,slice_num,:]
+            slice = data_new_ds[:, :, slice_num, :]
 
             # also generate 64^3 vol with 0 everywhere except at the slice locs save it
             temp = 0*deepcopy(data_new_ds)
-            temp[:,:,slice_num,:] = slice
+            temp[:, :, slice_num, :] = slice
         elif dim == 0:
             # downsample vol to slice res along slice axis
             data_new_ds = Resize(spatial_size=[16, 64, 64])(data_new)
             # generate rand number between 0-num slices and take slice of the vol. save it as h5 file
-            slice = data_new_ds[:,slice_num,:,:]
+            slice = data_new_ds[:, slice_num, :, :]
 
             # also generate 64^3 vol with 0 everywhere except at the slice locs save it
             temp = 0*deepcopy(data_new_ds)
-            temp[:,slice_num,:,:] = slice
+            temp[:, slice_num, :, :] = slice
 
+        np.savez(join(output_dir, subname, 'slice_'+str(n)+'.npz'),
+                 slice_num=slice_num, slice=slice, dim=dim)
 
-        np.savez(join(output_dir,subname,'slice_'+str(n)+'.npz'),slice_num=slice_num,slice = slice, dim = dim)
-        
         slice_vol = Resize(spatial_size=[64, 64, 64])(temp)
 
         # generate a random affine transform, apply same transform and apply to volume and slice as well
 
-        agrid = rand_affine_grid(spatial_size=[64,64,64])
+        agrid = rand_affine_grid(spatial_size=[64, 64, 64])
         data_new = resample(img=data_new, grid=agrid)
-        SaveImage(output_dir=output_dir, output_postfix='image_aff' +str(n), resample=False)(data_new)
+        SaveImage(output_dir=output_dir, output_postfix='image_aff' +
+                  str(n), resample=False)(data_new)
         slice_vol_rot = resample(img=slice_vol, grid=agrid)
-        SaveImage(output_dir=output_dir, output_postfix='slice_aff' +str(n), resample=False)(slice_vol_rot)
+        SaveImage(output_dir=output_dir, output_postfix='slice_aff' +
+                  str(n), resample=False)(slice_vol_rot)
 
-
-
- 
 
 if __name__ == '__main__':
 
