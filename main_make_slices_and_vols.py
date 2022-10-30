@@ -11,7 +11,7 @@ from os.path import split, splitext, join
 def make_slices_vols(filename, num_stacks=3, output_dir='./'):
 
     _, fname = split(filename)
-    subname = splitext(fname)
+    subname = fname[:-7]
 
     data, _ = LoadImage()(filename)
     '''SaveImage(output_dir=output_dir,
