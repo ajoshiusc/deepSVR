@@ -1,5 +1,7 @@
 *.nii.gz
 feta_syn_data*/*
+monai_data_dir/*
+monai_data_dir
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
