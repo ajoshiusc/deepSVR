@@ -47,6 +47,7 @@ def make_slices_vols(filename, num_stacks=3, output_dir='./'):
             # also generate 64^3 vol with 0 everywhere except at the slice locs save it
             temp = 0*deepcopy(data_new_ds)
             temp[:, :, :, slice_num] = slice
+
         elif dim == 1:
             # downsample vol to slice res along slice axis
             data_new_ds = Resize(spatial_size=[64, 16, 64])(data_new)
@@ -71,6 +72,8 @@ def make_slices_vols(filename, num_stacks=3, output_dir='./'):
 
         slice_vol = Resize(spatial_size=[64, 64, 64])(temp)
 
+        SaveImage(output_dir=output_dir, output_postfix='slice_' +
+                  str(n), resample=False)(slice_vol)
         # generate a random affine transform, apply same transform and apply to volume and slice as well
 
         agrid = rand_affine_grid(spatial_size=[64, 64, 64])
