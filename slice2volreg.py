@@ -6,6 +6,7 @@ from monai.transforms import (
     RandRotateD,
     RandZoomD,
     ScaleIntensityRanged,
+    ScaleIntensityRangePercentilesd
 )
 from monai.data import DataLoader, Dataset, CacheDataset
 from monai.config import print_config, USE_COMPILED
@@ -19,12 +20,13 @@ from torch.nn import MSELoss
 import matplotlib.pyplot as plt
 import os
 import tempfile
+from glob import glob
 
 
 print_config()
 set_determinism(42)
 
-directory = os.environ.get("MONAI_DATA_DIRECTORY")
+#directory = os.environ.get("MONAI_DATA_DIRECTORY")
 
 directory = "/home/ajoshi/projects/deepSVR/monai_data_dir"
 root_dir = tempfile.mkdtemp() if directory is None else directory
@@ -33,10 +35,20 @@ print(root_dir)
 
 
 train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
-training_datadict = [
+
+image_files = glob('/home/ajoshi/projects/deepSVR/feta_syn_data_slices/sub-*T2w/*_T2w_image.nii.gz')
+
+'''training_datadict = [
     {"fixed_hand": item["image"], "moving_hand": item["image"]}
     for item in train_data.data if item["label"] == 4  # label 4 is for xray hands
-]
+]'''
+
+training_datadict = [
+    {"fixed_hand": item, "moving_hand": item}
+    for item in image_files  # label 4 is for xray hands
+]    #for item in train_data.data if item["label"] == 4  # label 4 is for xray hands
+
+
 print("\n first training items: ", training_datadict[:3])
 
 
@@ -44,10 +56,11 @@ train_transforms = Compose(
     [
         LoadImageD(keys=["fixed_hand", "moving_hand"]),
         EnsureChannelFirstD(keys=["fixed_hand", "moving_hand"]),
-        ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"],
-                             a_min=0., a_max=255., b_min=0.0, b_max=1.0, clip=True,),
-        RandRotateD(keys=["moving_hand"], range_x=np.pi/4, prob=1.0, keep_size=True, mode="bicubic"),
-        RandZoomD(keys=["moving_hand"], min_zoom=0.9, max_zoom=1.1, prob=1.0, mode="bicubic", align_corners=False),
+        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand"],lower=0,upper=99,b_min=0.0, b_max=1.0, clip=True)
+        #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"],
+        #                     a_min=0., a_max=350, b_min=0.0, b_max=1.0, clip=True,),
+        #RandRotateD(keys=["moving_hand"], range_x=np.pi/4, prob=1.0, keep_size=True, mode="bicubic"),
+        #RandZoomD(keys=["moving_hand"], min_zoom=0.9, max_zoom=1.1, prob=1.0, mode="bicubic", align_corners=False),
     ]
 )
 
@@ -63,10 +76,10 @@ print(f"fixed_image shape: {fixed_image.shape}")
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("moving_image")
-plt.imshow(moving_image, cmap="gray")
+plt.imshow(moving_image[:,:,32], cmap="gray")
 plt.subplot(1, 2, 2)
 plt.title("fixed_image")
-plt.imshow(fixed_image, cmap="gray")
+plt.imshow(fixed_image[:,:,32], cmap="gray")
 
 plt.show()
 
@@ -77,8 +90,8 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 device = torch.device("cuda:0")
 model = GlobalNet(
-    image_size=(64, 64),
-    spatial_dims=2,
+    image_size=(64, 64, 64),
+    spatial_dims=3,
     in_channels=2,  # moving and fixed
     num_channel_initial=16,
     depth=3).to(device)
@@ -87,9 +100,9 @@ if USE_COMPILED:
     warp_layer = Warp(3, "border").to(device)
 else:
     warp_layer = Warp("bilinear", "border").to(device)
-optimizer = torch.optim.Adam(model.parameters(), 1e-5)
+optimizer = torch.optim.Adam(model.parameters(), 1e-12)
 
-max_epochs = 200
+max_epochs = 20
 epoch_loss_values = []
 
 for epoch in range(max_epochs):
@@ -135,10 +148,29 @@ fixed_image = fixed.detach().cpu().numpy()[:, 0]
 moving_image = moving.detach().cpu().numpy()[:, 0]
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
 
+batch_size = 5
+plt.subplots(batch_size, 3, figsize=(8, 10))
+for b in range(batch_size):
+    # moving image
+    plt.subplot(batch_size, 3, b * 3 + 1)
+    plt.axis('off')
+    plt.title("moving image")
+    plt.imshow(moving_image[b][:,:,32], cmap="gray")
+    # fixed image
+    plt.subplot(batch_size, 3, b * 3 + 2)
+    plt.axis('off')
+    plt.title("fixed image")
+    plt.imshow(fixed_image[b][:,:,32], cmap="gray")
+    # warped moving
+    plt.subplot(batch_size, 3, b * 3 + 3)
+    plt.axis('off')
+    plt.title("predicted image")
+    plt.imshow(pred_image[b][:,:,32], cmap="gray")
+plt.axis('off')
+plt.show()
 
 
-
-
+print('Done!')
 
 
 
