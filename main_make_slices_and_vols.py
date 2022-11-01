@@ -18,7 +18,7 @@ def make_slices_vols(filename, num_stacks=3, output_dir='./'):
               output_postfix='orig', resample=False)(data)'''
     data = EnsureChannelFirst()(data)
 
-    data = CropForeground()(data)
+    data = CropForeground(margin=32)(data)
 
     data = Resize(spatial_size=[64, 64, 64])(data)
     SaveImage(output_dir=output_dir, output_postfix='image',
@@ -29,6 +29,8 @@ def make_slices_vols(filename, num_stacks=3, output_dir='./'):
     rand_affine_grid = RandAffineGrid(translate_range=(
         2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16))
     resample = Resample(mode=("bilinear"), padding_mode="border")
+
+
     for n in range(num_stacks):
 
         data_new = rand_affine(data)
@@ -93,6 +95,6 @@ if __name__ == '__main__':
 
     for nii_name in sublist:
 
-        make_slices_vols(filename=nii_name, num_stacks=3, output_dir=out_dir)
+        make_slices_vols(filename=nii_name, num_stacks=32, output_dir=out_dir)
 
     print('done')
