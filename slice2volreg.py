@@ -5,8 +5,8 @@ from monai.transforms import (
     LoadImageD,
     RandRotateD,
     RandZoomD,
-    ScaleIntensityRanged,
-    ScaleIntensityRangePercentilesd
+    GaussianSmoothd,
+    ScaleIntensityRangePercentilesd, Resized
 )
 from monai.data import DataLoader, Dataset, CacheDataset
 from monai.config import print_config, USE_COMPILED
@@ -16,7 +16,7 @@ from monai.apps import MedNISTDataset
 
 import numpy as np
 import torch
-from torch.nn import MSELoss
+from torch.nn import MSELoss, CrossEntropyLoss
 import matplotlib.pyplot as plt
 import os
 import tempfile
@@ -34,9 +34,9 @@ print(root_dir)
 
 
 
-train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
+#train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
 
-image_files = glob('/home/ajoshi/projects/deepSVR/feta_syn_data_slices/sub-*T2w/*_T2w_image.nii.gz')
+image_files = glob('/home/ajoshi/projects/deepSVR/feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
 
 '''training_datadict = [
     {"fixed_hand": item["image"], "moving_hand": item["image"]}
@@ -56,11 +56,13 @@ train_transforms = Compose(
     [
         LoadImageD(keys=["fixed_hand", "moving_hand"]),
         EnsureChannelFirstD(keys=["fixed_hand", "moving_hand"]),
-        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand"],lower=0,upper=99,b_min=0.0, b_max=1.0, clip=True)
-        #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"],
-        #                     a_min=0., a_max=350, b_min=0.0, b_max=1.0, clip=True,),
-        #RandRotateD(keys=["moving_hand"], range_x=np.pi/4, prob=1.0, keep_size=True, mode="bicubic"),
-        #RandZoomD(keys=["moving_hand"], min_zoom=0.9, max_zoom=1.1, prob=1.0, mode="bicubic", align_corners=False),
+        Resized(keys=["fixed_hand", "moving_hand"],spatial_size=[32, 32, 32]),
+        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=2),
+        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand"],lower=0,upper=99,b_min=0.0, b_max=1.0, clip=True),
+        #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"], a_min=0., a_max=850, b_min=0.0, b_max=1.0, clip=True,),
+        RandRotateD(keys=["moving_hand"], range_x=0*np.pi/4, range_y=0*np.pi/4, range_z=np.pi/4, prob=1.0, keep_size=True,padding_mode='border'),#, mode="bicubic")
+        #RandZoomD(keys=["fixed_hand"], min_zoom=0.9, max_zoom=1.1, prob=1.0),
+
     ]
 )
 
@@ -76,10 +78,10 @@ print(f"fixed_image shape: {fixed_image.shape}")
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("moving_image")
-plt.imshow(moving_image[:,:,32], cmap="gray")
+plt.imshow(moving_image[:,:,16], cmap="gray")
 plt.subplot(1, 2, 2)
 plt.title("fixed_image")
-plt.imshow(fixed_image[:,:,32], cmap="gray")
+plt.imshow(fixed_image[:,:,16], cmap="gray")
 
 plt.show()
 
@@ -90,19 +92,19 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 device = torch.device("cuda:0")
 model = GlobalNet(
-    image_size=(64, 64, 64),
+    image_size=(32, 32, 32),
     spatial_dims=3,
     in_channels=2,  # moving and fixed
-    num_channel_initial=16,
-    depth=3).to(device)
+    num_channel_initial=4,
+    depth=4).to(device)
 image_loss = MSELoss()
 if USE_COMPILED:
     warp_layer = Warp(3, "border").to(device)
 else:
     warp_layer = Warp("bilinear", "border").to(device)
-optimizer = torch.optim.Adam(model.parameters(), 1e-12)
+optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-max_epochs = 20
+max_epochs = 100
 epoch_loss_values = []
 
 for epoch in range(max_epochs):
@@ -123,8 +125,7 @@ for epoch in range(max_epochs):
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
-        # print(f"{step}/{len(train_ds) // train_loader.batch_size}, "
-        #       f"train_loss: {loss.item():.4f}")
+        #print(f"{step}/{len(train_ds) // train_loader.batch_size}, "f"train_loss: {loss.item():.4f}")
 
     epoch_loss /= step
     epoch_loss_values.append(epoch_loss)
@@ -134,7 +135,7 @@ for epoch in range(max_epochs):
 plt.plot(epoch_loss_values)
 
 
-val_ds = CacheDataset(data=training_datadict[2000:2500], transform=train_transforms,
+val_ds = CacheDataset(data=training_datadict[:10], transform=train_transforms,
                       cache_rate=1.0, num_workers=0)
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
@@ -155,17 +156,17 @@ for b in range(batch_size):
     plt.subplot(batch_size, 3, b * 3 + 1)
     plt.axis('off')
     plt.title("moving image")
-    plt.imshow(moving_image[b][:,:,32], cmap="gray")
+    plt.imshow(moving_image[b][:,:,16], cmap="gray")
     # fixed image
     plt.subplot(batch_size, 3, b * 3 + 2)
     plt.axis('off')
     plt.title("fixed image")
-    plt.imshow(fixed_image[b][:,:,32], cmap="gray")
+    plt.imshow(fixed_image[b][:,:,16], cmap="gray")
     # warped moving
     plt.subplot(batch_size, 3, b * 3 + 3)
     plt.axis('off')
     plt.title("predicted image")
-    plt.imshow(pred_image[b][:,:,32], cmap="gray")
+    plt.imshow(pred_image[b][:,:,16], cmap="gray")
 plt.axis('off')
 plt.show()
 
