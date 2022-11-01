@@ -24,8 +24,9 @@ import tempfile
 print_config()
 set_determinism(42)
 
+directory = os.environ.get("MONAI_DATA_DIRECTORY")
 
-directory = "./monai_data_dir"
+directory = "/home/ajoshi/projects/deepSVR/monai_data_dir"
 root_dir = tempfile.mkdtemp() if directory is None else directory
 print(root_dir)
 
