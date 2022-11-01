@@ -57,7 +57,7 @@ train_transforms = Compose(
         LoadImageD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
         EnsureChannelFirstD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
         Resized(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],spatial_size=[32, 32, 32]),
-        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=4),
+        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=2),
         ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
         #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"], a_min=0., a_max=850, b_min=0.0, b_max=1.0, clip=True,),
         RandRotateD(keys=["moving_hand", "moving_orig"], range_x=np.pi/4, range_y=np.pi/4, range_z=np.pi/4, prob=1.0, keep_size=True,padding_mode='border'),#, mode="bicubic")
@@ -85,7 +85,7 @@ plt.imshow(fixed_image[:,:,16], cmap="gray")
 
 plt.show()
 
-train_ds = CacheDataset(data=training_datadict[:200], transform=train_transforms,
+train_ds = CacheDataset(data=training_datadict[:10000], transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
@@ -104,7 +104,7 @@ else:
     warp_layer = Warp("bilinear", "border").to(device)
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-max_epochs = 100
+max_epochs = 50
 epoch_loss_values = []
 
 for epoch in range(max_epochs):
@@ -140,13 +140,15 @@ val_ds = CacheDataset(data=training_datadict[2110:2150], transform=train_transfo
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
     moving = batch_data["moving_hand"].to(device)
+    fixed_orig = batch_data["fixed_orig"].to(device)
+    moving_orig = batch_data["moving_orig"].to(device)
     fixed = batch_data["fixed_hand"].to(device)
     ddf = model(torch.cat((moving, fixed), dim=1))
-    pred_image = warp_layer(moving, ddf)
+    pred_image = warp_layer(moving_orig, ddf)
     break
 
-fixed_image = fixed.detach().cpu().numpy()[:, 0]
-moving_image = moving.detach().cpu().numpy()[:, 0]
+fixed_image = fixed_orig.detach().cpu().numpy()[:, 0]
+moving_image = moving_orig.detach().cpu().numpy()[:, 0]
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
 
 batch_size = 5
