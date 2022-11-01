@@ -17,7 +17,7 @@ from monai.apps import MedNISTDataset
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -28,15 +28,15 @@ set_determinism(42)
 
 #directory = os.environ.get("MONAI_DATA_DIRECTORY")
 
-directory = "/home/ajoshi/projects/deepSVR/monai_data_dir"
+'''directory = "./monai_data_dir"
 root_dir = tempfile.mkdtemp() if directory is None else directory
 print(root_dir)
-
+'''
 
 
 #train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
 
-image_files = glob('/home/ajoshi/projects/deepSVR/feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
+image_files = glob('/project/ajoshi_27/feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
 
 '''training_datadict = [
     {"fixed_hand": item["image"], "moving_hand": item["image"]}
@@ -75,7 +75,7 @@ moving_image = check_data["moving_hand"][0][0]
 print(f"moving_image shape: {moving_image.shape}")
 print(f"fixed_image shape: {fixed_image.shape}")
 
-plt.figure("check", (12, 6))
+'''plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("moving_image")
 plt.imshow(moving_image[:,:,16], cmap="gray")
@@ -84,7 +84,7 @@ plt.title("fixed_image")
 plt.imshow(fixed_image[:,:,16], cmap="gray")
 
 plt.show()
-
+'''
 train_ds = CacheDataset(data=training_datadict[:10000], transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
@@ -129,11 +129,14 @@ for epoch in range(max_epochs):
 
     epoch_loss /= step
     epoch_loss_values.append(epoch_loss)
+
+    torch.save(model.state_dict(), "best_metric_model_"+str(epoch)+".pth")
+
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
-    
+'''  
 plt.plot(epoch_loss_values)
-
+'''
 
 val_ds = CacheDataset(data=training_datadict[2110:2150], transform=train_transforms,
                       cache_rate=1.0, num_workers=0)
@@ -152,7 +155,7 @@ moving_image = moving_orig.detach().cpu().numpy()[:, 0]
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
 
 batch_size = 5
-plt.subplots(batch_size, 3, figsize=(8, 10))
+'''plt.subplots(batch_size, 3, figsize=(8, 10))
 for b in range(batch_size):
     # moving image
     plt.subplot(batch_size, 3, b * 3 + 1)
@@ -172,7 +175,7 @@ for b in range(batch_size):
 plt.axis('off')
 plt.show()
 
-
+'''
 print('Done!')
 
 
