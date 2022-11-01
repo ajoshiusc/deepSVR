@@ -5,7 +5,7 @@ from monai.transforms import (
     LoadImageD,
     RandRotateD,
     RandZoomD,
-    GaussianSmoothd,
+    GaussianSmoothd,RandGaussianSmoothd,
     ScaleIntensityRangePercentilesd, Resized
 )
 from monai.data import DataLoader, Dataset, CacheDataset
@@ -44,7 +44,7 @@ image_files = glob('/home/ajoshi/projects/deepSVR/feta_syn_data_slices/sub-*T2w/
 ]'''
 
 training_datadict = [
-    {"fixed_hand": item, "moving_hand": item}
+    {"fixed_hand": item, "moving_hand": item,"fixed_orig": item, "moving_orig": item}
     for item in image_files  # label 4 is for xray hands
 ]    #for item in train_data.data if item["label"] == 4  # label 4 is for xray hands
 
@@ -54,14 +54,14 @@ print("\n first training items: ", training_datadict[:3])
 
 train_transforms = Compose(
     [
-        LoadImageD(keys=["fixed_hand", "moving_hand"]),
-        EnsureChannelFirstD(keys=["fixed_hand", "moving_hand"]),
-        Resized(keys=["fixed_hand", "moving_hand"],spatial_size=[32, 32, 32]),
-        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=2),
-        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand"],lower=0,upper=99,b_min=0.0, b_max=1.0, clip=True),
+        LoadImageD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
+        EnsureChannelFirstD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
+        Resized(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],spatial_size=[32, 32, 32]),
+        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=4),
+        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
         #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"], a_min=0., a_max=850, b_min=0.0, b_max=1.0, clip=True,),
-        RandRotateD(keys=["moving_hand"], range_x=0*np.pi/4, range_y=0*np.pi/4, range_z=np.pi/4, prob=1.0, keep_size=True,padding_mode='border'),#, mode="bicubic")
-        #RandZoomD(keys=["fixed_hand"], min_zoom=0.9, max_zoom=1.1, prob=1.0),
+        RandRotateD(keys=["moving_hand", "moving_orig"], range_x=np.pi/4, range_y=np.pi/4, range_z=np.pi/4, prob=1.0, keep_size=True,padding_mode='border'),#, mode="bicubic")
+        RandZoomD(keys=["moving_hand","moving_orig"], min_zoom=0.9, max_zoom=1.1, prob=1.0),
 
     ]
 )
@@ -85,7 +85,7 @@ plt.imshow(fixed_image[:,:,16], cmap="gray")
 
 plt.show()
 
-train_ds = CacheDataset(data=training_datadict[:1000], transform=train_transforms,
+train_ds = CacheDataset(data=training_datadict[:200], transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
@@ -135,7 +135,7 @@ for epoch in range(max_epochs):
 plt.plot(epoch_loss_values)
 
 
-val_ds = CacheDataset(data=training_datadict[:10], transform=train_transforms,
+val_ds = CacheDataset(data=training_datadict[2110:2150], transform=train_transforms,
                       cache_rate=1.0, num_workers=0)
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
