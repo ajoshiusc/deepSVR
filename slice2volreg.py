@@ -36,7 +36,7 @@ print(root_dir)
 
 #train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
 
-image_files = glob('/project/ajoshi_27/feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
+image_files = glob('./feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
 
 '''training_datadict = [
     {"fixed_hand": item["image"], "moving_hand": item["image"]}
