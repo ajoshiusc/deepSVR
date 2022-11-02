@@ -56,7 +56,7 @@ train_transforms = Compose(
     [
         LoadImageD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
         EnsureChannelFirstD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
-        Resized(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],spatial_size=[32, 32, 32]),
+        #Resized(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],spatial_size=[32, 32, 32]),
         GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=2),
         ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
         #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"], a_min=0., a_max=850, b_min=0.0, b_max=1.0, clip=True,),
@@ -92,7 +92,7 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 device = torch.device("cuda:0")
 model = GlobalNet(
-    image_size=(32, 32, 32),
+    image_size=(64, 64, 64),
     spatial_dims=3,
     in_channels=2,  # moving and fixed
     num_channel_initial=4,
@@ -130,7 +130,7 @@ for epoch in range(max_epochs):
     epoch_loss /= step
     epoch_loss_values.append(epoch_loss)
 
-    torch.save(model.state_dict(), "best_metric_model_"+str(epoch)+".pth")
+    torch.save(model.state_dict(), './model_64/epoch_'+str(epoch)+'.pth')
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
