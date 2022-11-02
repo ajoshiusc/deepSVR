@@ -2,6 +2,8 @@
 feta_syn_data*/*
 monai_data_dir/*
 monai_data_dir
+model*
+*.temp
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

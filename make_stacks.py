@@ -6,6 +6,8 @@ import numpy as np
 from copy import deepcopy
 
 
+PRE_ALIGNED_STACKS = True
+
 def make_slices(filename, num_stacks=3, output_dir='./'):
 
     rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2),
@@ -44,7 +46,10 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
         data_new = deepcopy(data_ds)  # torch.zeros(data_ds.shape)
         data_new = Resize(spatial_size=[16, 64, 64])(data_new)
 
-        rot_data = rand_affine(data_ds)
+        if PRE_ALIGNED_STACKS:
+            rot_data = deepcopy(data_ds)
+        else:
+            rot_data = rand_affine(data_ds)
 
         for i in range(data_new.shape[1]):
             temp = rand_affine_x(rot_data)
@@ -91,7 +96,7 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 if __name__ == '__main__':
 
     sublist = glob.glob('/deneb_disk/feta_2022/feta_2.2/sub*/*/*T2w.nii.gz')
-    out_dir = './feta_syn_data'
+    out_dir = './feta_syn_data_prealigned'
     #sublist =['/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz']
 
     for nii_name in sublist:
