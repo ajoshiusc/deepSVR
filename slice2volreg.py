@@ -17,11 +17,11 @@ from monai.apps import MedNISTDataset
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
-
+from monai.data.nifti_writer import write_nifti
 
 def masked_mse(moving,slicevol):
     msk = slicevol>0
@@ -45,12 +45,6 @@ print(root_dir)
 #train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
 
 image_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_T2w_image.nii.gz')
-stack0_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_x_0.nii.gz')
-stack1_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_x_1.nii.gz')
-stack2_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_y_0.nii.gz')
-stack3_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_y_1.nii.gz')
-stack4_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_z_0.nii.gz')
-stack5_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_z_1.nii.gz')
 
 
 
@@ -63,14 +57,16 @@ d5 = [{"image": item, "stack": item[:-13]+'_stack_z_1.nii.gz', "dir":2} for item
 
 training_datadict = d0 + d1 + d2 + d3 + d4 + d5
 
-print("\n first training items: ", training_datadict[:3])
+print("\n first training items: ", training_datadict)
 
 
 train_transforms = Compose(
     [
         LoadImageD(keys=["image", "stack"]),
         EnsureChannelFirstD(keys=["image", "stack"]),
-        Resized(keys=["stack"],spatial_size=[64,64,64])
+        Resized(keys=["stack"],spatial_size=[64,64,64]),
+        ScaleIntensityRangePercentilesd(keys=["image", "stack"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
+
     ]
 )
 
@@ -111,9 +107,9 @@ if USE_COMPILED:
     warp_layer = Warp(3, "border").to(device)
 else:
     warp_layer = Warp("bilinear", "border").to(device)
-optimizer = torch.optim.Adam(model.parameters(), 1e-4)
+optimizer = torch.optim.Adam(model.parameters(), 1e-8)
 
-max_epochs = 1
+max_epochs = 5
 epoch_loss_values = []
 
 
@@ -161,16 +157,20 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
-'''  
 plt.plot(epoch_loss_values)
-'''
 
-val_ds = CacheDataset(data=training_datadict[210:250], transform=train_transforms,
+batch_size=16
+val_ds = CacheDataset(data=training_datadict[0:16], transform=train_transforms,
                       cache_rate=1.0, num_workers=0)
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
     moving = batch_data["image"].to(device)
-    fixed = batch_data["stack"].to(device)
+    fixed_full = batch_data["stack"]
+    dir = batch_data['dir']
+
+    fixed = torch.zeros(batch_size,1,64,64,64)
+    fixed[:,0,32:36,:,:]=fixed_full[:,0,32:36,:,:]
+    fixed = fixed.to(device)
     ddf = model(torch.cat((moving, fixed), dim=1))
     pred_image = warp_layer(moving, ddf)
     break
@@ -178,6 +178,11 @@ for batch_data in val_loader:
 fixed_image = fixed.detach().cpu().numpy()[:, 0]
 moving_image = moving.detach().cpu().numpy()[:, 0]
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
+
+for i in range(batch_size):
+    write_nifti(fixed_image[i],'fixed'+str(i)+'.nii.gz')
+    write_nifti(moving_image[i],'moving'+str(i)+'.nii.gz')
+    write_nifti(pred_image[i],'pred'+str(i)+'.nii.gz')
 
 #batch_size = 5
 '''plt.subplots(batch_size, 3, figsize=(8, 10))
