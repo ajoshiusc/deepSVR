@@ -23,6 +23,14 @@ import tempfile
 from glob import glob
 
 
+def masked_mse(moving,slicevol):
+    msk = slicevol>0
+    err = (moving-slicevol)*msk
+    loss = torch.sqrt(torch.sum(err**2))
+    return loss
+
+
+
 print_config()
 set_determinism(42)
 
@@ -36,44 +44,45 @@ print(root_dir)
 
 #train_data = MedNISTDataset(root_dir=root_dir, section="training", download=True, transform=None)
 
-image_files = glob('./feta_syn_data_slices/sub-*T2w/*_T2w_*.nii.gz')
+image_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_T2w_image.nii.gz')
+stack0_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_x_0.nii.gz')
+stack1_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_x_1.nii.gz')
+stack2_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_y_0.nii.gz')
+stack3_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_y_1.nii.gz')
+stack4_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_z_0.nii.gz')
+stack5_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_stack_z_1.nii.gz')
 
-'''training_datadict = [
-    {"fixed_hand": item["image"], "moving_hand": item["image"]}
-    for item in train_data.data if item["label"] == 4  # label 4 is for xray hands
-]'''
 
-training_datadict = [
-    {"fixed_hand": item, "moving_hand": item,"fixed_orig": item, "moving_orig": item}
-    for item in image_files  # label 4 is for xray hands
-]    #for item in train_data.data if item["label"] == 4  # label 4 is for xray hands
 
+d0 = [{"image": item, "stack": item[:-13]+'_stack_x_0.nii.gz', "dir":0} for item in image_files]
+d1 = [{"image": item, "stack": item[:-13]+'_stack_x_1.nii.gz', "dir":0} for item in image_files]
+d2 = [{"image": item, "stack": item[:-13]+'_stack_y_0.nii.gz', "dir":1} for item in image_files]
+d3 = [{"image": item, "stack": item[:-13]+'_stack_y_1.nii.gz', "dir":1} for item in image_files]
+d4 = [{"image": item, "stack": item[:-13]+'_stack_z_0.nii.gz', "dir":2} for item in image_files]
+d5 = [{"image": item, "stack": item[:-13]+'_stack_z_1.nii.gz', "dir":2} for item in image_files]
+
+training_datadict = d0 + d1 + d2 + d3 + d4 + d5
 
 print("\n first training items: ", training_datadict[:3])
 
 
 train_transforms = Compose(
     [
-        LoadImageD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
-        EnsureChannelFirstD(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"]),
-        #Resized(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],spatial_size=[32, 32, 32]),
-        GaussianSmoothd(keys=["fixed_hand", "moving_hand"],sigma=2),
-        ScaleIntensityRangePercentilesd(keys=["fixed_hand", "moving_hand", "fixed_orig", "moving_orig"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
-        #ScaleIntensityRanged(keys=["fixed_hand", "moving_hand"], a_min=0., a_max=850, b_min=0.0, b_max=1.0, clip=True,),
-        RandRotateD(keys=["moving_hand", "moving_orig"], range_x=np.pi/4, range_y=np.pi/4, range_z=np.pi/4, prob=1.0, keep_size=True,padding_mode='border'),#, mode="bicubic")
-        RandZoomD(keys=["moving_hand","moving_orig"], min_zoom=0.9, max_zoom=1.1, prob=1.0),
-
+        LoadImageD(keys=["image", "stack"]),
+        EnsureChannelFirstD(keys=["image", "stack"]),
+        Resized(keys=["stack"],spatial_size=[64,64,64])
     ]
 )
 
 check_ds = Dataset(data=training_datadict, transform=train_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
-fixed_image = check_data["fixed_hand"][0][0]
-moving_image = check_data["moving_hand"][0][0]
-
+fixed_image = check_data["image"][0][0]
+moving_image = check_data["stack"][0][0]
+dir_image = check_data['dir'][0]
 print(f"moving_image shape: {moving_image.shape}")
 print(f"fixed_image shape: {fixed_image.shape}")
+print(f"dir shape: {dir_image.shape}")
 
 '''plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
@@ -85,7 +94,7 @@ plt.imshow(fixed_image[:,:,16], cmap="gray")
 
 plt.show()
 '''
-train_ds = CacheDataset(data=training_datadict[:10000], transform=train_transforms,
+train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
@@ -97,15 +106,16 @@ model = GlobalNet(
     in_channels=2,  # moving and fixed
     num_channel_initial=4,
     depth=4).to(device)
-image_loss = MSELoss()
+image_loss = masked_mse #(image,slicevol)MSELoss()
 if USE_COMPILED:
     warp_layer = Warp(3, "border").to(device)
 else:
     warp_layer = Warp("bilinear", "border").to(device)
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-max_epochs = 50
+max_epochs = 1
 epoch_loss_values = []
+
 
 for epoch in range(max_epochs):
     print("-" * 10)
@@ -113,24 +123,41 @@ for epoch in range(max_epochs):
     model.train()
     epoch_loss, step = 0, 0
     for batch_data in train_loader:
-        step += 1
-        optimizer.zero_grad()
+        for sliceno in range(int(64/4)):
+            step += 1
+            optimizer.zero_grad()
 
-        moving = batch_data["moving_hand"].to(device)
-        fixed = batch_data["fixed_hand"].to(device)
-        ddf = model(torch.cat((moving, fixed), dim=1))
-        pred_image = warp_layer(moving, ddf)
+            moving = batch_data["image"].to(device)
+            batch_size = moving.shape[0]
 
-        loss = image_loss(pred_image, fixed)
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
+            fixed = torch.zeros(batch_size,1,64,64,64)
+            slice_ind = torch.tensor(range(4*(sliceno),4*sliceno+1))
+ 
+            for s in range(batch_size):
+                dir = batch_data['dir'][s]
+                if dir == 0:
+                    fixed[s,:,slice_ind,:,:] = batch_data['stack'][s,:,slice_ind,:,:]
+                elif dir == 1:
+                    fixed[s,:,:,slice_ind,:] = batch_data['stack'][s,:,:,slice_ind,:]
+                elif dir == 2:
+                    fixed[s,:,:,:,slice_ind] = batch_data['stack'][s,:,:,:,slice_ind]
+
+            fixed = fixed.to(device)
+
+            ddf = model(torch.cat((moving, fixed), dim=1))
+            pred_image = warp_layer(moving, ddf)
+
+            loss = image_loss(pred_image,fixed)
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
         #print(f"{step}/{len(train_ds) // train_loader.batch_size}, "f"train_loss: {loss.item():.4f}")
+
 
     epoch_loss /= step
     epoch_loss_values.append(epoch_loss)
 
-    torch.save(model.state_dict(), './model_64/epoch_'+str(epoch)+'.pth')
+    torch.save(model.state_dict(), './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
@@ -138,23 +165,21 @@ for epoch in range(max_epochs):
 plt.plot(epoch_loss_values)
 '''
 
-val_ds = CacheDataset(data=training_datadict[2110:2150], transform=train_transforms,
+val_ds = CacheDataset(data=training_datadict[210:250], transform=train_transforms,
                       cache_rate=1.0, num_workers=0)
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
-    moving = batch_data["moving_hand"].to(device)
-    fixed_orig = batch_data["fixed_orig"].to(device)
-    moving_orig = batch_data["moving_orig"].to(device)
-    fixed = batch_data["fixed_hand"].to(device)
+    moving = batch_data["image"].to(device)
+    fixed = batch_data["stack"].to(device)
     ddf = model(torch.cat((moving, fixed), dim=1))
-    pred_image = warp_layer(moving_orig, ddf)
+    pred_image = warp_layer(moving, ddf)
     break
 
-fixed_image = fixed_orig.detach().cpu().numpy()[:, 0]
-moving_image = moving_orig.detach().cpu().numpy()[:, 0]
+fixed_image = fixed.detach().cpu().numpy()[:, 0]
+moving_image = moving.detach().cpu().numpy()[:, 0]
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
 
-batch_size = 5
+#batch_size = 5
 '''plt.subplots(batch_size, 3, figsize=(8, 10))
 for b in range(batch_size):
     # moving image
