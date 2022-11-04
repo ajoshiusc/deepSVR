@@ -242,8 +242,8 @@ class RigidHead(nn.Module):
             out_init = torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float)
         elif spatial_dims == 3:
             in_features = in_channels * decode_size[0] * decode_size[1] * decode_size[2]
-            out_features = 5
-            out_init = torch.tensor([0, 0, 0, 0, 0], dtype=torch.float)
+            out_features = 6
+            out_init = torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float)
         else:
             raise ValueError(f"only support 2D/3D operation, got spatial_dims={spatial_dims}")
 
@@ -270,18 +270,19 @@ class RigidHead(nn.Module):
         elif self.spatial_dims == 3:
 
             theta_new = torch.zeros((16,12), device = theta.device)
-            theta_new[:,0] = torch.sin(theta[:,0])*torch.cos(theta[:,1])
-            theta_new[:,1] = torch.sin(theta[:,0])*torch.sin(theta[:,1])
-            theta_new[:,2] = torch.cos(theta[:,0])
-            theta_new[:,3] = theta[:,2]
-            theta_new[:,4] = torch.cos(theta[:,0])*torch.cos(theta[:,1])
-            theta_new[:,5] = torch.cos(theta[:,0])*torch.sin(theta[:,1])
-            theta_new[:,6] = -torch.sin(theta[:,0])
-            theta_new[:,7] = theta[:,3]
+            
+            theta_new[:,0] = torch.cos(theta[:,1])*torch.cos(theta[:,0])
+            theta_new[:,1] = torch.sin(theta[:,2])*torch.sin(theta[:,1])*torch.cos(theta[:,0])-torch.cos(theta[:,2])*torch.sin(theta[:,0])
+            theta_new[:,2] = torch.sin(theta[:,2])*torch.sin(theta[:,0])+torch.cos(theta[:,2])*torch.sin(theta[:,1])*torch.cos(theta[:,0])
+            theta_new[:,3] = theta[:,3]
+            theta_new[:,4] = torch.cos(theta[:,1])*torch.sin(theta[:,0])
+            theta_new[:,5] = torch.cos(theta[:,2])*torch.cos(theta[:,0])+torch.sin(theta[:,0])*torch.sin(theta[:,1])*torch.sin(theta[:,2])
+            theta_new[:,6] = torch.cos(theta[:,2])*torch.sin(theta[:,1]*torch.sin(theta[:,0]))-torch.sin(theta[:,2])*torch.cos(theta[:,0])
+            theta_new[:,7] = theta[:,4]
             theta_new[:,8] = -torch.sin(theta[:,1])
-            theta_new[:,9] = torch.cos(theta[:,1])
-            theta_new[:,10] = 0
-            theta_new[:,11] = theta[:,4]
+            theta_new[:,9] = torch.sin(theta[:,2])*torch.cos(theta[:,1])
+            theta_new[:,10] = torch.cos(theta[:,2])*torch.cos(theta[:,1])
+            theta_new[:,11] = theta[:,5]
 
             grid_warped = torch.einsum("qijk,bpq->bpijk", grid_padded, theta_new.reshape(-1, 3, 4))
         else:

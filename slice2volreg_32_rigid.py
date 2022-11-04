@@ -57,7 +57,7 @@ d5 = [{"image": item, "stack": item[:-13]+'_stack_z_1.nii.gz', "dir":2} for item
 
 training_datadict = d0 + d1 + d2 + d3 + d4 + d5
 
-print("\n first training items: ", training_datadict)
+#print("\n first training items: ", training_datadict)
 
 
 train_transforms = Compose(
@@ -65,7 +65,7 @@ train_transforms = Compose(
         LoadImageD(keys=["image", "stack"]),
         EnsureChannelFirstD(keys=["image", "stack"]),
         Resized(keys=["image","stack"],spatial_size=[32,32,32]),
-        ScaleIntensityRangePercentilesd(keys=["image", "stack"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
+        #ScaleIntensityRangePercentilesd(keys=["image", "stack"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
 
     ]
 )
@@ -107,7 +107,7 @@ if USE_COMPILED:
     warp_layer = Warp(3, "border").to(device)
 else:
     warp_layer = Warp("bilinear", "border").to(device)
-optimizer = torch.optim.Adam(model.parameters(), 1e-6)
+optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
 max_epochs = 500
 epoch_loss_values = []
