@@ -127,3 +127,5 @@ for epoch in range(max_epochs):
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
 plt.plot(epoch_loss_values)
+plt.show()
+print("done")
