@@ -1,3 +1,6 @@
+#!python
+#AUM Shree Ganeshaya Namha
+
 from monai.utils import set_determinism, first
 from monai.transforms import (
     EnsureChannelFirstD,
@@ -22,6 +25,7 @@ import tempfile
 from glob import glob
 from monai.data.nifti_writer import write_nifti
 
+MODEL_FILE = '/home/ajoshi/projects/deepSVR/model_64_unet_lrem4/epoch_550.pth'
 
 print_config()
 set_determinism(42)
@@ -59,8 +63,8 @@ train_transforms = Compose(
 check_ds = Dataset(data=training_datadict, transform=train_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
-image = check_data["image"][0][0]
-stack = check_data["stacks"][0][4]
+image = check_data["image"]
+stack = check_data["stacks"]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
@@ -68,10 +72,10 @@ print(f"stack shape: {stack.shape}")
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
-plt.imshow(image[:, :, 32], cmap="gray")
+plt.imshow(image[0, 0, 32], cmap="gray")
 plt.subplot(1, 2, 2)
 plt.title("stack")
-plt.imshow(stack[:, :, 32], cmap="gray")
+plt.imshow(stack[0, 0, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
 plt.show()
@@ -81,7 +85,7 @@ train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu" # torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = unet.UNet(
     spatial_dims=3,
@@ -92,44 +96,32 @@ model = unet.UNet(
     num_res_units=2).to(device)
 image_loss = MSELoss()
 
-optimizer = torch.optim.Adam(model.parameters(), 1e-4)
+optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 
-max_epochs = 5000
+max_epochs = 4880
 epoch_loss_values = []
 
 
-for epoch in range(max_epochs):
-    print("-" * 10)
-    print(f"epoch {epoch + 1}/{max_epochs}")
-    model.train()
-    epoch_loss, step = 0, 0
-    for batch_data in train_loader:
-        step += 1
-        optimizer.zero_grad()
+# load weights
+model.load_state_dict(torch.load(MODEL_FILE))
+model.eval()
 
-        image = batch_data["image"].to(device)
-        stacks = batch_data["stacks"].to(device)
 
-        out_image = model(stacks)
+batch_size=16
+val_ds = CacheDataset(data=training_datadict[0:16], transform=train_transforms,
+                      cache_rate=1.0, num_workers=0)
+val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
+for batch_data in val_loader:
+    image = batch_data["image"].to(device)
+    stacks = batch_data["stacks"]
+    pred_image = model(stacks)
+    break
 
-        loss = image_loss(image, out_image)
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
-        #print(f"{step}/{len(train_ds) // train_loader.batch_size}, "f"train_loss: {loss.item():.4f}")
+image = image.numpy()[:, 0]
+stack0 = stacks.numpy()[:, 0]
+pred_image = pred_image.detach().numpy()[:, 0]
 
-    epoch_loss /= step
-    epoch_loss_values.append(epoch_loss)
-
-    if np.mod(epoch, 10) == 0:
-        torch.save(model.state_dict(),
-                   './model_64_unet_lrem4/epoch_'+str(epoch)+'.pth')
-
-    print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
-
-plt.plot(epoch_loss_values)
-plt.savefig('epochs1em4.png')
-
-plt.show()
-
-print("done")
+for i in range(batch_size):
+    write_nifti(image[i],'image'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack0'+str(i)+'.nii.gz')
+    write_nifti(pred_image[i],'pred_img'+str(i)+'.nii.gz')
