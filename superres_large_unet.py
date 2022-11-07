@@ -16,7 +16,7 @@ from monai.networks.nets import unet
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -64,7 +64,7 @@ stack = check_data["stacks"][0][4]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
-
+'''
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
@@ -75,7 +75,7 @@ plt.imshow(stack[:, :, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
 plt.show()
-
+'''
 train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
@@ -129,9 +129,10 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-plt.plot(epoch_loss_values)
+np.savez('epoch_loss_values_large_unet.npz',epoch_loss_values=epoch_loss_values)
+'''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
 
 plt.show()
-
+'''
 print("done")
