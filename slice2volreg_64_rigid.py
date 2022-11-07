@@ -17,7 +17,7 @@ from monai.apps import MedNISTDataset
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -157,8 +157,9 @@ for epoch in range(max_epochs):
         torch.save(model.state_dict(), './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
-    
-plt.plot(epoch_loss_values)
+
+  
+#plt.plot(epoch_loss_values)
 
 batch_size=16
 val_ds = CacheDataset(data=training_datadict[0:16], transform=train_transforms,
