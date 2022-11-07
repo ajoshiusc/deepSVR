@@ -64,7 +64,7 @@ train_transforms = Compose(
     [
         LoadImageD(keys=["image", "stack"]),
         EnsureChannelFirstD(keys=["image", "stack"]),
-        Resized(keys=["image","stack"],spatial_size=[32,32,32]),
+        Resized(keys=["image","stack"],spatial_size=[64,64,64]),
         #ScaleIntensityRangePercentilesd(keys=["image", "stack"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
 
     ]
@@ -97,7 +97,7 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 device = torch.device("cuda:0")
 model = GlobalNetRigid(
-    image_size=(32, 32, 32),
+    image_size=(64, 64, 64),
     spatial_dims=3,
     in_channels=2,  # moving and fixed
     num_channel_initial=16,
@@ -119,15 +119,15 @@ for epoch in range(max_epochs):
     model.train()
     epoch_loss, step = 0, 0
     for batch_data in train_loader:
-        for sliceno in range(int(32/2)):
+        for sliceno in range(int(64/4)):
             step += 1
             optimizer.zero_grad()
 
             moving = batch_data["image"].to(device)
             batch_size = moving.shape[0]
 
-            fixed = torch.zeros(batch_size,1,32,32,32)
-            slice_ind = torch.tensor(range(2*(sliceno),2*sliceno+1))
+            fixed = torch.zeros(batch_size,1,64,64,64)
+            slice_ind = torch.tensor(range(4*(sliceno),4*sliceno+1))
  
             for s in range(batch_size):
                 dir = batch_data['dir'][s]
@@ -153,7 +153,8 @@ for epoch in range(max_epochs):
     epoch_loss /= step
     epoch_loss_values.append(epoch_loss)
 
-    torch.save(model.state_dict(), './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
+    if np.mod(epoch, 10) == 0:
+        torch.save(model.state_dict(), './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
     
@@ -168,7 +169,7 @@ for batch_data in val_loader:
     fixed_full = batch_data["stack"]
     dir = batch_data['dir']
 
-    fixed = torch.zeros(batch_size,1,32,32,32)
+    fixed = torch.zeros(batch_size,1,64,64,64)
     fixed[:,0,16:18,:,:]=fixed_full[:,0,16:18,:,:]
     fixed = fixed.to(device)
     ddf = model(torch.cat((moving, fixed), dim=1))
