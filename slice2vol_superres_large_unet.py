@@ -180,7 +180,7 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
-                   './model_64_unet_large_lrem4/epoch_'+str(epoch)+'.pth')
+                   './model_64_svr_superres_unet_large_lrem4/epoch_'+str(epoch)+'.pth')
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 

@@ -14,6 +14,8 @@ eval "$(conda shell.bash hook)"
 conda activate py3
 cd /project/ajoshi_27/code_farm/deepSVR
 
+ulimit -n 2880
+
 echo "Checking Cuda, GPU USED?"
 python -c 'import torch; print(torch.cuda.is_available()); print(torch.cuda.current_device()); print(torch.cuda.get_device_name(0))'
 nvidia-smi
