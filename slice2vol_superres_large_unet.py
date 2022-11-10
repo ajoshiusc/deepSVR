@@ -86,7 +86,7 @@ plt.show()
 '''
 train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
-train_loader = DataLoader(train_ds, batch_size=8, shuffle=True, num_workers=2)
+train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
