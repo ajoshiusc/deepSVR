@@ -6,7 +6,7 @@ import numpy as np
 from copy import deepcopy
 
 
-PRE_ALIGNED_STACKS = True
+PRE_ALIGNED_STACKS = False
 
 def make_slices(filename, num_stacks=3, output_dir='./'):
 
@@ -95,8 +95,8 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 
 if __name__ == '__main__':
 
-    sublist = glob.glob('/deneb_disk/feta_2022/feta_2.2/sub*/*/*T2w.nii.gz')
-    out_dir = './feta_syn_data_prealigned'
+    sublist = glob.glob('/deneb_disk/camcan/cc700/mri/pipeline/release004/BIDS_20190411/anat/sub-CC*/anat/sub-CC2103*_T2w.nii.gz')
+    out_dir = './normal_mris_data'
     #sublist =['/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz']
 
     for nii_name in sublist:
