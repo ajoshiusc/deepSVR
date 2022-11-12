@@ -95,12 +95,25 @@ def make_slices(filename, num_stacks=3, output_dir='./'):
 
 if __name__ == '__main__':
 
-    sublist = glob.glob('/deneb_disk/camcan/cc700/mri/pipeline/release004/BIDS_20190411/anat/sub-CC*/anat/sub-CC2103*_T2w.nii.gz')
-    out_dir = './normal_mris_data'
-    #sublist =['/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz']
-
+    sublist_full = glob.glob('/deneb_disk/feta_2022/feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+    
+    # training data
+    sublist = sublist_full[:60]
+    out_dir = './train_fetal_data_60'
     for nii_name in sublist:
+        make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
 
+    # testing data
+    sublist = sublist_full[60:70]
+    out_dir = './test_fetal_data_10'
+    for nii_name in sublist:
+        make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
+
+
+    # valid data
+    sublist = sublist_full[70:]
+    out_dir = './valid_fetal_data_10'
+    for nii_name in sublist:
         make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
 
     print('done')
