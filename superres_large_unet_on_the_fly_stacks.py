@@ -38,6 +38,7 @@ subfiles_test = sublist_full[70:]
 #'/deneb_disk/feta_2022/feta_2.2/sub-029/anat/sub-029_rec-mial_T2w.nii.gz'
 
 training_datadict = [{"image": item} for item in subfiles_train]
+valid_datadict = [{"image": item} for item in subfiles_val]
 
 
 #training_datadict = d0 + d1 + d2 + d3 + d4 + d5
@@ -45,7 +46,7 @@ training_datadict = [{"image": item} for item in subfiles_train]
 #print("\n first training items: ", training_datadict)
 
 
-train_transforms = Compose(
+randstack_transforms = Compose(
     [
         LoadImageD(keys=["image"]),
         EnsureChannelFirstD(keys=["image"]),
@@ -77,7 +78,7 @@ train_transforms = Compose(
     ]
 )
 
-check_ds = Dataset(data=training_datadict, transform=train_transforms)
+check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
 image = check_data["image"][0][0]
@@ -97,9 +98,15 @@ plt.savefig('sample_data.png')
 
 plt.show()
 
-train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
+train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
+
+
+valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
+                        cache_rate=1.0, num_workers=4)
+valid_loader = DataLoader(valid_ds, batch_size=16, shuffle=True, num_workers=2)
+
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -147,6 +154,15 @@ for epoch in range(max_epochs):
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
                    './model_64_unet_large_lrem4/epoch_'+str(epoch)+'.pth')
+
+        valid_loss = 0
+        for valid_batch_data in valid_loader:
+            valid_image = valid_batch_data["image"].to(device)
+            valid_stacks = valid_batch_data["stacks"].to(device)
+            valid_out_image = model(valid_stacks)
+            valid_loss += image_loss(image, out_image)
+        print('validation loss:'+str(valid_loss))
+
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
