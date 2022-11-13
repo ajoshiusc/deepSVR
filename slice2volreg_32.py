@@ -66,7 +66,7 @@ train_transforms = Compose(
         EnsureChannelFirstD(keys=["image", "stack"]),
         Resized(keys=["image","stack"],spatial_size=[32,32,32]),
         ScaleIntensityRangePercentilesd(keys=["image", "stack"],lower=0,upper=100,b_min=0.0, b_max=1.0, clip=True),
-
+        
     ]
 )
 

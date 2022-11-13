@@ -16,7 +16,7 @@ from monai.networks.nets import unet
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -26,8 +26,7 @@ from monai.data.nifti_writer import write_nifti
 print_config()
 set_determinism(42)
 
-sublist_full = glob.glob(
-    '/deneb_disk/feta_2022/feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+sublist_full = glob('/deneb_disk/feta_2022/feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
 # training files
@@ -36,11 +35,9 @@ subfiles_train = sublist_full[:60]
 subfiles_val = sublist_full[60:70]
 subfiles_test = sublist_full[70:]
 
+#'/deneb_disk/feta_2022/feta_2.2/sub-029/anat/sub-029_rec-mial_T2w.nii.gz'
 
-training_datadict = [{"image": item, "stack0": item,
-                      "stack1": item, "stack2": item,
-                      "stack3": item, "stack4": item,
-                      "stack5": item} for item in subfiles_train]
+training_datadict = [{"image": item} for item in subfiles_train]
 
 
 #training_datadict = d0 + d1 + d2 + d3 + d4 + d5
@@ -51,14 +48,14 @@ training_datadict = [{"image": item, "stack0": item,
 train_transforms = Compose(
     [
         LoadImageD(keys=["image"]),
-        EnsureChannelFirstD(keys=["image"], spatial_size=[64, 64, 64]),
-        CropForegroundd(keys=["image"]),
+        EnsureChannelFirstD(keys=["image"]),
+        CropForegroundd(keys=["image"], source_key="image"),
         Resized(keys=["image"], spatial_size=[64, 64, 64]),
         ScaleIntensityRangePercentilesd(keys=["image"], lower=2, upper=98, b_min=0.0, b_max=10.0, clip=True),
         # make stacks
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16), padding_mode="border", keys=["image"]),
         
-        CopyItemsd(keys=["image"], names=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
+        CopyItemsd(keys=["image","image","image","image","image","image"], names=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border",keys=["stack0"]),
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border",keys=["stack1"]),
 
@@ -68,10 +65,15 @@ train_transforms = Compose(
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border",keys=["stack0"]),
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border",keys=["stack1"]),
 
+        Resized(keys=["stack0"],spatial_size=[16,64,64]), Resized(keys=["stack0"],spatial_size=[64,64,64]), 
+        Resized(keys=["stack1"],spatial_size=[16,64,64]), Resized(keys=["stack1"],spatial_size=[64,64,64]),
+        Resized(keys=["stack2"],spatial_size=[16,64,64]), Resized(keys=["stack2"],spatial_size=[64,64,64]),
+        Resized(keys=["stack3"],spatial_size=[64,16,64]), Resized(keys=["stack3"],spatial_size=[64,64,64]),
+        Resized(keys=["stack4"],spatial_size=[16,64,64]), Resized(keys=["stack4"],spatial_size=[64,64,64]),
+        Resized(keys=["stack5"],spatial_size=[64,64,16]), Resized(keys=["stack5"],spatial_size=[64,64,64]),
 
         ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
         #Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
-        
     ]
 )
 
@@ -79,22 +81,22 @@ check_ds = Dataset(data=training_datadict, transform=train_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
 image = check_data["image"][0][0]
-stack = check_data["stacks"][0][4]
+stack = check_data["stack0"][0][0]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
-'''
+
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
 plt.imshow(image[:, :, 32], cmap="gray")
 plt.subplot(1, 2, 2)
-plt.title("stack")
+plt.title("stack0")
 plt.imshow(stack[:, :, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
 plt.show()
-'''
+
 train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
