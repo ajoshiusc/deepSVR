@@ -24,9 +24,10 @@ from monai.data.nifti_writer import write_nifti
 
 
 print_config()
-set_determinism(42)
+# set_determinism(42)
 
-sublist_full = glob('/deneb_disk/feta_2022/feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+sublist_full = glob(
+    '/deneb_disk/feta_2022/feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
 # training files
@@ -35,7 +36,7 @@ subfiles_train = sublist_full[:60]
 subfiles_val = sublist_full[60:70]
 subfiles_test = sublist_full[70:]
 
-#'/deneb_disk/feta_2022/feta_2.2/sub-029/anat/sub-029_rec-mial_T2w.nii.gz'
+# '/deneb_disk/feta_2022/feta_2.2/sub-029/anat/sub-029_rec-mial_T2w.nii.gz'
 
 training_datadict = [{"image": item} for item in subfiles_train]
 valid_datadict = [{"image": item} for item in subfiles_val]
@@ -52,28 +53,44 @@ randstack_transforms = Compose(
         EnsureChannelFirstD(keys=["image"]),
         CropForegroundd(keys=["image"], source_key="image"),
         Resized(keys=["image"], spatial_size=[64, 64, 64]),
-        ScaleIntensityRangePercentilesd(keys=["image"], lower=2, upper=98, b_min=0.0, b_max=10.0, clip=True),
+        ScaleIntensityRangePercentilesd(
+            keys=["image"], lower=2, upper=98, b_min=0.0, b_max=10.0, clip=True),
         # make stacks
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2), rotate_range=(np.pi / 16, np.pi / 16, np.pi / 16), padding_mode="border", keys=["image"]),
-        
-        CopyItemsd(keys=["image","image","image","image","image","image"], names=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border",keys=["stack0"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border",keys=["stack1"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
+            np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
 
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border",keys=["stack2"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border",keys=["stack3"]),
+        CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
+                   "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
+            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack0"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
+            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack1"]),
 
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border",keys=["stack0"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border",keys=["stack1"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
+            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack2"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
+            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack3"]),
 
-        Resized(keys=["stack0"],spatial_size=[16,64,64]), Resized(keys=["stack0"],spatial_size=[64,64,64]), 
-        Resized(keys=["stack1"],spatial_size=[16,64,64]), Resized(keys=["stack1"],spatial_size=[64,64,64]),
-        Resized(keys=["stack2"],spatial_size=[16,64,64]), Resized(keys=["stack2"],spatial_size=[64,64,64]),
-        Resized(keys=["stack3"],spatial_size=[64,16,64]), Resized(keys=["stack3"],spatial_size=[64,64,64]),
-        Resized(keys=["stack4"],spatial_size=[16,64,64]), Resized(keys=["stack4"],spatial_size=[64,64,64]),
-        Resized(keys=["stack5"],spatial_size=[64,64,16]), Resized(keys=["stack5"],spatial_size=[64,64,64]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
+            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack0"]),
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
+            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack1"]),
 
-        ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
+        Resized(keys=["stack0"], spatial_size=[16, 64, 64]), Resized(
+            keys=["stack0"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack1"], spatial_size=[16, 64, 64]), Resized(
+            keys=["stack1"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack2"], spatial_size=[16, 64, 64]), Resized(
+            keys=["stack2"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack3"], spatial_size=[64, 16, 64]), Resized(
+            keys=["stack3"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack4"], spatial_size=[16, 64, 64]), Resized(
+            keys=["stack4"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack5"], spatial_size=[64, 64, 16]), Resized(
+            keys=["stack5"], spatial_size=[64, 64, 64]),
+
+        ConcatItemsd(keys=["stack0", "stack1", "stack2",
+                     "stack3", "stack4", "stack5"], name='stacks'),
         #Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
@@ -108,7 +125,6 @@ valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
 valid_loader = DataLoader(valid_ds, batch_size=16, shuffle=True, num_workers=2)
 
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = unet.UNet(
@@ -126,7 +142,7 @@ optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
 max_epochs = 5000
 epoch_loss_values = []
-
+epoch_loss_valid = []
 
 for epoch in range(max_epochs):
     print("-" * 10)
@@ -160,14 +176,15 @@ for epoch in range(max_epochs):
             valid_image = valid_batch_data["image"].to(device)
             valid_stacks = valid_batch_data["stacks"].to(device)
             valid_out_image = model(valid_stacks)
-            valid_loss += image_loss(image, out_image)
-        print('validation loss:'+str(valid_loss))
+            valid_loss += image_loss(image, out_image).item()
+            epoch_loss_valid.append(valid_loss)
 
+        print('validation loss:'+str(valid_loss))
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
 np.savez('epoch_loss_values_large_unet.npz',
-         epoch_loss_values=epoch_loss_values)
+         epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
 
