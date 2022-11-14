@@ -179,7 +179,7 @@ for epoch in range(max_epochs):
             valid_loss += image_loss(image, out_image).item()
             epoch_loss_valid.append(valid_loss)
 
-        print('validation loss:'+str(valid_loss))
+        print(f"validation loss: {valid_loss:.4f}")
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
