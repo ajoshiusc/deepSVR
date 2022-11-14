@@ -123,7 +123,7 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
-valid_loader = DataLoader(valid_ds, batch_size=16, shuffle=True, num_workers=2)
+valid_loader = DataLoader(valid_ds, batch_size=10, shuffle=True, num_workers=2)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -177,7 +177,7 @@ for epoch in range(max_epochs):
             valid_image = valid_batch_data["image"].to(device)
             valid_stacks = valid_batch_data["stacks"].to(device)
             valid_out_image = model(valid_stacks)
-            valid_loss += image_loss(image, valid_out_image).item()
+            valid_loss += image_loss(valid_image, valid_out_image).item()
             epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")

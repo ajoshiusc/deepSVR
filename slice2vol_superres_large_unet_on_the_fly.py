@@ -233,7 +233,7 @@ for epoch in range(max_epochs):
             valid_image = valid_batch_data["image"].to(device)
             valid_stacks = valid_batch_data["stacks"].to(device)
             valid_out_image = model(valid_stacks)
-            valid_loss += image_loss(image, valid_out_image).item()
+            valid_loss += image_loss(valid_image, valid_out_image).item()
             epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")
