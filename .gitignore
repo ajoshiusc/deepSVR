@@ -1,3 +1,4 @@
+feta_2.2*
 *.nii.gz
 feta_syn_data*/*
 monai_data_dir/*
