@@ -13,11 +13,11 @@ from monai.config import print_config, USE_COMPILED
 from network_mods import GlobalNetRigid
 from monai.networks.blocks import Warp
 from monai.apps import MedNISTDataset
-
+from transforms import RandMakeStackd
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -63,39 +63,10 @@ randstack_transforms = Compose(
             np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
 
         CopyItemsd(keys=["image"], names=["stack"]),
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
-            np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", axis=0, keys=["stack0"]),
- 
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
-            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack0"]),
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
-            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack1"]),
-
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
-            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack2"]),
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
-            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack3"]),
-
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
-            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack0"]),
-        RandMakeStackd(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
-            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack1"]),
-
-        Resized(keys=["stack0"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack0"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack1"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack1"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack2"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack2"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack3"], spatial_size=[64, 16, 64]), Resized(
-            keys=["stack3"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack4"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack4"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack5"], spatial_size=[64, 64, 16]), Resized(
-            keys=["stack5"], spatial_size=[64, 64, 64]),
-
-        ConcatItemsd(keys=["stack0", "stack1", "stack2",
-                     "stack3", "stack4", "stack5"], name='stacks'),
+        RandMakeStackd(keys=["stack"], stack_axis=0),
+        Resized(keys=["stack"], spatial_size=[64, 64, 64]),
+        
+        #ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
         # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
@@ -104,11 +75,11 @@ check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
 image = check_data["image"][0][0]
-stack = check_data["stack0"][0][0]
+stack = check_data["stack"][0][0]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
-'''
+
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
@@ -119,7 +90,7 @@ plt.imshow(stack[:, :, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
 plt.show()
-'''
+
 train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
@@ -165,10 +136,9 @@ for epoch in range(max_epochs):
             slice_ind = torch.tensor(range(4*(sliceno), 4*sliceno+1))
 
             for s in range(batch_size):
-                dir = batch_data['dir'][s]
+                dir = 0 #batch_data['dir'][s]
                 if dir == 0:
-                    fixed[s, :, slice_ind, :,
-                          :] = batch_data['stack'][s, :, slice_ind, :, :]
+                    fixed[s, :, slice_ind, :, :] = batch_data['stack'][s, :, slice_ind, :, :]
                 elif dir == 1:
                     fixed[s, :, :, slice_ind,
                           :] = batch_data['stack'][s, :, :, slice_ind, :]
@@ -196,8 +166,8 @@ for epoch in range(max_epochs):
         valid_loss = 0
         for valid_batch_data in valid_loader:
             valid_image = valid_batch_data["image"].to(device)
-            valid_stacks = valid_batch_data["stacks"].to(device)
-            valid_out_image = model(valid_stacks)
+            valid_stack = valid_batch_data["stack"].to(device)
+            valid_out_image = model(torch.cat((valid_moving, valid_fixed), dim=1))
             valid_loss += image_loss(valid_image, valid_out_image).item()
             epoch_loss_valid.append(valid_loss)
 

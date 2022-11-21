@@ -269,7 +269,7 @@ class RigidHead(nn.Module):
             grid_warped = torch.einsum("qij,bpq->bpij", grid_padded, theta.reshape(-1, 2, 3))
         elif self.spatial_dims == 3:
 
-            theta_new = torch.zeros((16,12), device = theta.device)
+            theta_new = torch.zeros((theta.shape[0],12), device = theta.device)
             
             theta_new[:,0] = torch.cos(theta[:,1])*torch.cos(theta[:,0])
             theta_new[:,1] = torch.sin(theta[:,2])*torch.sin(theta[:,1])*torch.cos(theta[:,0])-torch.cos(theta[:,2])*torch.sin(theta[:,0])
