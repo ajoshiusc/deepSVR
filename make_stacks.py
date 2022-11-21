@@ -8,7 +8,7 @@ from copy import deepcopy
 
 PRE_ALIGNED_STACKS = False
 
-def make_slices(filename, num_stacks=3, output_dir='./'):
+def make_stacks(filename, num_stacks=3, output_dir='./'):
 
     rand_affine = RandAffine(mode=("bilinear"), prob=1.0, translate_range=(2, 2, 2),
                              rotate_range=(
@@ -101,19 +101,19 @@ if __name__ == '__main__':
     sublist = sublist_full[:60]
     out_dir = './train_fetal_data_60'
     for nii_name in sublist:
-        make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
+        make_stacks(filename=nii_name, num_stacks=3, output_dir=out_dir)
 
     # testing data
     sublist = sublist_full[60:70]
     out_dir = './test_fetal_data_10'
     for nii_name in sublist:
-        make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
+        make_stacks(filename=nii_name, num_stacks=3, output_dir=out_dir)
 
 
     # valid data
     sublist = sublist_full[70:]
     out_dir = './valid_fetal_data_10'
     for nii_name in sublist:
-        make_slices(filename=nii_name, num_stacks=3, output_dir=out_dir)
+        make_stacks(filename=nii_name, num_stacks=3, output_dir=out_dir)
 
     print('done')
