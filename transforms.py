@@ -29,7 +29,8 @@ class RandMakeStack(Randomizable, Transform):
             np.pi / 16, np.pi / 32, np.pi / 32),
             padding_mode="border")
 
-        data_new = torch.zeros(img.shape)#deepcopy(img)  # torch.zeros(data_ds.shape)
+        # deepcopy(img)  # torch.zeros(data_ds.shape)
+        data_new = torch.zeros(img.shape)
         data_new = Resize(spatial_size=[16, 64, 64])(data_new)
         rot_data = rand_affine(img)
 
@@ -37,12 +38,12 @@ class RandMakeStack(Randomizable, Transform):
             temp = rand_affine_x(rot_data)
             temp = Resize(spatial_size=[16, 64, 64])(temp)
             data_new[:, i, :, :] = temp[:, i, :, :]
-        
+
         return data_new
 
     def __call__(self, img: np.ndarray) -> np.ndarray:
         return self.make_stackx(img)
-        #return self.add_noise(img)
+        # return self.add_noise(img)
 
 
 class RandMakeStackd(Randomizable, MapTransform):
@@ -65,7 +66,7 @@ class RandMakeStackd(Randomizable, MapTransform):
     def __call__(
         self, data: Mapping[Hashable, np.ndarray]
     ) -> Mapping[Hashable, np.ndarray]:
-        #self.randomize(data[monai.utils.first(self.keys)])
+        # self.randomize(data[monai.utils.first(self.keys)])
 
         d = dict(data)
         for key in self.keys:
@@ -73,27 +74,28 @@ class RandMakeStackd(Randomizable, MapTransform):
         return d
 
 
-import matplotlib.pyplot as plt
-
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
 
     filename = '/deneb_disk/feta_2022/feta_2.2/sub-080/anat/sub-080_rec-irtk_T2w.nii.gz'
 
-    trans = Compose([LoadImaged(keys="img"), EnsureChannelFirstd(keys="img"), Resized(keys='img',spatial_size=[64, 64, 64]), RandMakeStackd(keys="img")])
+    trans = Compose([LoadImaged(keys="img"), EnsureChannelFirstd(keys="img"), Resized(
+        keys='img', spatial_size=[64, 64, 64]), RandMakeStackd(keys="img",stack_axis=0)])
 
     img = LoadImage(image_only=True)(filename)
     img = EnsureChannelFirst()(img)
+    img = Resize(spatial_size=[64, 64, 64])(img)
     outimg = RandMakeStack(stack_axis=0)(img)
     #img = trans(filename)
-    check_ds = Dataset(data=[{"img":filename}], transform=trans)
+    check_ds = Dataset(data=[{"img": filename}], transform=trans)
     ds1 = DataLoader(check_ds, batch_size=1, shuffle=True)
     ds = first(ds1)
     ds = ds['img'][0]
 
     fig2, (ax2, ax3) = plt.subplots(nrows=1, ncols=2)
     ax2.imshow(outimg[0, 8])
-    #plt.show()
-    ax3.imshow(ds[0][8])
+    # plt.show()
+    ax3.imshow(ds[0, 8])
     plt.tight_layout()
     plt.show()
 
