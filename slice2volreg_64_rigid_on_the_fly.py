@@ -165,10 +165,10 @@ for epoch in range(max_epochs):
                    './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
         valid_loss = 0
         for valid_batch_data in valid_loader:
-            valid_image = valid_batch_data["image"].to(device)
-            valid_stack = valid_batch_data["stack"].to(device)
+            valid_fixed = valid_batch_data["image"].to(device)
+            valid_moving = valid_batch_data["stack"].to(device)
             valid_out_image = model(torch.cat((valid_moving, valid_fixed), dim=1))
-            valid_loss += image_loss(valid_image, valid_out_image).item()
+            valid_loss += image_loss(valid_out_image, valid_fixed).item()
             epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")
