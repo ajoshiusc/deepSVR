@@ -162,7 +162,7 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
-                   './model_64_slice2vol/epoch_'+str(epoch)+'.pth')
+                   './model_64_slice2vol_reg/epoch_'+str(epoch)+'.pth')
         valid_loss = 0
         for valid_batch_data in valid_loader:
             valid_fixed = valid_batch_data["image"].to(device)
