@@ -161,13 +161,36 @@ for epoch in range(max_epochs):
     epoch_loss_values.append(epoch_loss)
 
     if np.mod(epoch, 10) == 0:
+
         torch.save(model.state_dict(),
                    './model_64_slice2vol_reg/epoch_'+str(epoch)+'.pth')
         valid_loss = 0
+ 
+        # Calculate validation loss
+        model.eval()
+
         for valid_batch_data in valid_loader:
-            valid_fixed = valid_batch_data["image"].to(device)
-            valid_moving = valid_batch_data["stack"].to(device)
-            valid_out_image = model(torch.cat((valid_moving, valid_fixed), dim=1))
+            for sliceno in range(int(64/4)):
+
+                valid_moving = valid_batch_data["image"].to(device)
+                batch_size = valid_batch_data['stack'].shape[0]
+
+                valid_fixed = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
+                slice_ind = torch.tensor(range(4*sliceno, 4*sliceno+1))
+
+                for s in range(batch_size):
+                    dir = 0 #batch_data['dir'][s]
+                    if dir == 0:
+                        valid_fixed[s, :, slice_ind, :, :] = valid_batch_data['stack'][s, :, slice_ind, :, :].to(device)
+                    elif dir == 1:
+                        valid_fixed[s, :, :, slice_ind, :] = valid_batch_data['stack'][s, :, :, slice_ind, :].to(device)
+                    elif dir == 2:
+                        valid_fixed[s, :, :, :, slice_ind] = valid_batch_data['stack'][s, :, :, :, slice_ind].to(device)
+
+
+            with torch.no_grad():
+                valid_out_image = model(torch.cat((valid_moving, valid_fixed), dim=1))
+            
             valid_loss += image_loss(valid_out_image, valid_fixed).item()
             epoch_loss_valid.append(valid_loss)
 
