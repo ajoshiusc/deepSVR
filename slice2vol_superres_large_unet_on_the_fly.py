@@ -121,7 +121,7 @@ if USE_COMPILED:
 else:
     warp_layer = Warp("bilinear", "border").to(device)
 
-reg.load_state_dict(torch.load('./model_64_slice2vol_reg/epoch_10.pth'))
+reg.load_state_dict(torch.load('./model_64_slice2vol_reg/epoch_400.pth'))
 reg.eval()
 
 
@@ -137,7 +137,7 @@ model = unet.UNet(
 
 image_loss = MSELoss()
 
-model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_40.pth'))
+model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_230.pth'))
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
