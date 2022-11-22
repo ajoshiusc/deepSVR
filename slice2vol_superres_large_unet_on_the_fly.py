@@ -50,10 +50,6 @@ subfiles_test = sublist_full[70:]
 
 training_datadict = [{"image": item} for item in subfiles_train]
 valid_datadict = [{"image": item} for item in subfiles_val]
-# training_datadict = d0 + d1 + d2 + d3 + d4 + d5
-
-# print("\n first training items: ", training_datadict)
-
 
 randstack_transforms = Compose(
     [
@@ -69,9 +65,11 @@ randstack_transforms = Compose(
         CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
                    "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
 
-        RandMakeStackd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"],stack_axis=0),
+        RandMakeStackd(keys=["stack0", "stack1", "stack2",
+                       "stack3", "stack4", "stack5"], stack_axis=0),
 
-        Resized(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack0", "stack1", "stack2", "stack3",
+                "stack4", "stack5"], spatial_size=[64, 64, 64]),
 
         ConcatItemsd(keys=["stack0", "stack1", "stack2",
                      "stack3", "stack4", "stack5"], name='stacks'),
@@ -123,7 +121,7 @@ if USE_COMPILED:
 else:
     warp_layer = Warp("bilinear", "border").to(device)
 
-reg.load_state_dict(torch.load('./model_64_slice2vol/epoch_10.pth'))
+reg.load_state_dict(torch.load('./model_64_slice2vol_reg/epoch_10.pth'))
 reg.eval()
 
 
@@ -139,7 +137,7 @@ model = unet.UNet(
 
 image_loss = MSELoss()
 
-model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_4090.pth'))
+model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_40.pth'))
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
@@ -174,7 +172,7 @@ for epoch in range(max_epochs):
                 slice_ind = torch.tensor(range(4*(sliceno), 4*(sliceno+1)))
 
                 for s in range(batch_size):
-                    dir = batch_data['dir'+str(stacknum)][s]
+                    dir = 0 # batch_data['dir'+str(stacknum)][s]
                     if dir == 0:
                         fixed[s, :, slice_ind, :, :] = batch_data['stack' +
                                                                   str(stacknum)][s, :, slice_ind, :, :]
@@ -217,8 +215,8 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-np.savez('svr_epoch_loss_values_large_unet.npz',
-         epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
+    np.savez('svr_epoch_loss_values_large_unet.npz',
+            epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
 
