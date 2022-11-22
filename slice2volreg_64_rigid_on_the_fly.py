@@ -204,8 +204,8 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-np.savez('svr_reg_epoch_loss_values_on_the_fly.npz',
-         epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
+    np.savez('svr_reg_epoch_loss_values_on_the_fly.npz',
+            epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 
 
 print('Done!')
