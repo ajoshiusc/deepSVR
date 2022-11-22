@@ -5,9 +5,9 @@ from monai.utils import set_determinism, first
 from monai.transforms import (
     EnsureChannelFirstD,
     Compose, ConcatItemsd,
-    LoadImageD,
-    RandRotateD,
-    RandZoomD,
+    LoadImageD,CopyItemsd,
+    RandRotateD,RandAffined,
+    RandZoomD,CropForegroundd,
     GaussianSmoothd, RandGaussianSmoothd,
     ScaleIntensityRangePercentilesd, Resized
 )
@@ -24,21 +24,32 @@ import os
 import tempfile
 from glob import glob
 from monai.data.nifti_writer import write_nifti
+from transforms import RandMakeStackd
+
 
 MODEL_FILE = '/home/ajoshi/model_64_unet_large_lrem4/epoch_1010.pth'
+#MODEL_FILE = '/home/ajoshi/epoch_370.pth'
 
 print_config()
 set_determinism(42)
 
 
 image_files = glob('./normal_mris_data/sub*/sub-*_T2w_image.nii.gz')
-image_files = glob('./feta_syn_data_prealigned/sub-*_T2w/sub-*_T2w_image.nii.gz')
+
+sublist_full = glob(
+    './feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
-training_datadict = [{"image": item, "stack0": item[:-13]+'_stack_x_0.nii.gz',
-                      "stack1": item[:-13]+'_stack_x_1.nii.gz', "stack2": item[:-13]+'_stack_y_0.nii.gz',
-                      "stack3": item[:-13]+'_stack_y_1.nii.gz', "stack4": item[:-13]+'_stack_z_0.nii.gz',
-                      "stack5": item[:-13]+'_stack_z_1.nii.gz'} for item in image_files]
+# training files
+
+subfiles_train = sublist_full[:60]
+subfiles_val = sublist_full[60:70]
+subfiles_test = sublist_full[70:]
+
+# '/deneb_disk/feta_2022/feta_2.2/sub-029/anat/sub-029_rec-mial_T2w.nii.gz'
+
+training_datadict = [{"image": item} for item in subfiles_train]
+valid_datadict = [{"image": item} for item in subfiles_val]
 
 
 #training_datadict = d0 + d1 + d2 + d3 + d4 + d5
@@ -46,23 +57,34 @@ training_datadict = [{"image": item, "stack0": item[:-13]+'_stack_x_0.nii.gz',
 #print("\n first training items: ", training_datadict)
 
 
-train_transforms = Compose(
+randstack_transforms = Compose(
     [
-        LoadImageD(keys=["image", "stack0", "stack1",
-                   "stack2", "stack3", "stack4", "stack5"]),
-        EnsureChannelFirstD(
-            keys=["image", "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
+        LoadImageD(keys=["image"]),
+        EnsureChannelFirstD(keys=["image"]),
+        CropForegroundd(keys=["image"], source_key="image"),
+        Resized(keys=["image"], spatial_size=[64, 64, 64]),
+        ScaleIntensityRangePercentilesd(
+            keys=["image"], lower=2, upper=98, b_min=0.0, b_max=10.0, clip=True),
+        # make stacks
+        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
+            np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
+        CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
+                   "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
+
+        RandMakeStackd(keys=["stack0", "stack1", "stack2",
+                       "stack3", "stack4", "stack5"], stack_axis=0),
+
         Resized(keys=["stack0", "stack1", "stack2", "stack3",
                 "stack4", "stack5"], spatial_size=[64, 64, 64]),
-        ConcatItemsd(keys=["stack0", "stack1", "stack0",
-                     "stack1", "stack0", "stack1"], name='stacks'),
-        #Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
-        ScaleIntensityRangePercentilesd(keys=["image", "stack0", "stack1", "stack2", "stack3", "stack4", "stack5", "stacks"],lower=2,upper=98,b_min=0.0, b_max=10.0, clip=True),
 
+        ConcatItemsd(keys=["stack0", "stack1", "stack2",
+                     "stack3", "stack4", "stack5"], name='stacks'),
+        # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
 
-check_ds = Dataset(data=training_datadict, transform=train_transforms)
+
+check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
 image = check_data["image"]
@@ -82,7 +104,7 @@ plt.savefig('sample_data.png')
 
 plt.show()
 
-train_ds = CacheDataset(data=training_datadict, transform=train_transforms,
+train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
@@ -122,8 +144,8 @@ model.load_state_dict(torch.load(MODEL_FILE))
 model.eval()
 
 
-batch_size=2
-val_ds = CacheDataset(data=training_datadict[0:16], transform=train_transforms,
+batch_size=16
+val_ds = CacheDataset(data=training_datadict[0:16], transform=randstack_transforms,
                       cache_rate=1.0, num_workers=0)
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
