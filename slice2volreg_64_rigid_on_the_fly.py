@@ -114,7 +114,7 @@ else:
     warp_layer = Warp("bilinear", "border").to(device)
 optimizer = torch.optim.Adam(model.parameters(), 1e-5)
 
-max_epochs = 500
+max_epochs = 5000
 epoch_loss_values = []
 epoch_loss_valid = []
 

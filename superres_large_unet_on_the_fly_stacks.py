@@ -21,7 +21,7 @@ import os
 import tempfile
 from glob import glob
 from monai.data.nifti_writer import write_nifti
-
+from transforms import RandMakeStackd
 
 print_config()
 # set_determinism(42)
@@ -46,7 +46,6 @@ valid_datadict = [{"image": item} for item in subfiles_val]
 
 #print("\n first training items: ", training_datadict)
 
-
 randstack_transforms = Compose(
     [
         LoadImageD(keys=["image"]),
@@ -58,40 +57,16 @@ randstack_transforms = Compose(
         # make stacks
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
             np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
-
         CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
                    "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
-            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack0"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(.2, 1, 1), rotate_range=(
-            np.pi / 16, np.pi / 32, np.pi / 32), padding_mode="border", keys=["stack1"]),
 
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
-            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack2"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, .2, 1), rotate_range=(
-            np.pi / 32, np.pi / 16, np.pi / 32), padding_mode="border", keys=["stack3"]),
+        RandMakeStackd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"],stack_axis=0),
 
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
-            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack0"]),
-        RandAffined(mode=("bilinear"), prob=1.0, translate_range=(1, 1, .2), rotate_range=(
-            np.pi / 32, np.pi / 32, np.pi / 16), padding_mode="border", keys=["stack1"]),
-
-        Resized(keys=["stack0"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack0"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack1"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack1"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack2"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack2"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack3"], spatial_size=[64, 16, 64]), Resized(
-            keys=["stack3"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack4"], spatial_size=[16, 64, 64]), Resized(
-            keys=["stack4"], spatial_size=[64, 64, 64]),
-        Resized(keys=["stack5"], spatial_size=[64, 64, 16]), Resized(
-            keys=["stack5"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], spatial_size=[64, 64, 64]),
 
         ConcatItemsd(keys=["stack0", "stack1", "stack2",
                      "stack3", "stack4", "stack5"], name='stacks'),
-        #Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
+        # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
 
@@ -172,13 +147,23 @@ for epoch in range(max_epochs):
         torch.save(model.state_dict(),
                    './model_64_unet_large_lrem4/epoch_'+str(epoch)+'.pth')
 
-        valid_loss = 0
+        # run validation
+
+        valid_step = 0
         for valid_batch_data in valid_loader:
+            valid_step += 1
+            valid_loss = 0
             valid_image = valid_batch_data["image"].to(device)
             valid_stacks = valid_batch_data["stacks"].to(device)
-            valid_out_image = model(valid_stacks)
+
+            model.eval()
+            with torch.no_grad():
+                valid_out_image = model(valid_stacks)
+
             valid_loss += image_loss(valid_image, valid_out_image).item()
-            epoch_loss_valid.append(valid_loss)
+
+        valid_loss /= valid_step
+        epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")
 
