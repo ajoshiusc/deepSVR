@@ -60,9 +60,11 @@ randstack_transforms = Compose(
         CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
                    "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
 
-        RandMakeStackd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"],stack_axis=0),
+        RandMakeStackd(keys=["stack0", "stack1", "stack2",
+                       "stack3", "stack4", "stack5"], stack_axis=0),
 
-        Resized(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], spatial_size=[64, 64, 64]),
+        Resized(keys=["stack0", "stack1", "stack2", "stack3",
+                "stack4", "stack5"], spatial_size=[64, 64, 64]),
 
         ConcatItemsd(keys=["stack0", "stack1", "stack2",
                      "stack3", "stack4", "stack5"], name='stacks'),
@@ -169,8 +171,8 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-np.savez('epoch_loss_values_large_unet_on_the_fly.npz',
-         epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
+    np.savez('large_unet_on_the_fly_loss_values.npz',
+             epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
 
