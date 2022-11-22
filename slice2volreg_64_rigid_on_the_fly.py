@@ -169,8 +169,10 @@ for epoch in range(max_epochs):
         # Calculate validation loss
         model.eval()
 
+        valid_step = 0
         for valid_batch_data in valid_loader:
             for sliceno in range(int(64/4)):
+                valid_step += 1
 
                 valid_moving = valid_batch_data["image"].to(device)
                 batch_size = valid_batch_data['stack'].shape[0]
@@ -188,11 +190,15 @@ for epoch in range(max_epochs):
                         valid_fixed[s, :, :, :, slice_ind] = valid_batch_data['stack'][s, :, :, :, slice_ind].to(device)
 
 
-            with torch.no_grad():
-                valid_out_image = model(torch.cat((valid_moving, valid_fixed), dim=1))
+                with torch.no_grad():
+                    ddf = model(torch.cat((valid_moving, valid_fixed), dim=1))
+                    valid_out_image = warp_layer(valid_moving, ddf)
+
+                valid_loss += image_loss(valid_out_image, valid_fixed).item()
             
-            valid_loss += image_loss(valid_out_image, valid_fixed).item()
-            epoch_loss_valid.append(valid_loss)
+        valid_loss /= valid_step
+        
+        epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")
 
