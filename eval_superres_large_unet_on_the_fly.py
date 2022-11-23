@@ -27,7 +27,7 @@ from monai.data.nifti_writer import write_nifti
 from transforms import RandMakeStackd
 
 
-MODEL_FILE = '/home/ajoshi/model_64_unet_large_lrem4/epoch_1010.pth'
+MODEL_FILE = '/home/ajoshi/epoch_1840.pth'
 #MODEL_FILE = '/home/ajoshi/epoch_370.pth'
 
 print_config()
