@@ -41,7 +41,7 @@ sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 PRETRAINED = True
 
 if PRETRAINED:
-    start_epoch = 2800
+    start_epoch = 2790
 else:
     start_epoch = 0
 
