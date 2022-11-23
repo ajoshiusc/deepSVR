@@ -35,8 +35,17 @@ print_config()
 #directory = os.environ.get("MONAI_DATA_DIRECTORY")
 
 
-sublist_full = glob(
-    './feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+
+
+PRETRAINED = True
+
+if PRETRAINED:
+    start_epoch = 2800
+else:
+    start_epoch = 0
+
+trained_model_file = './model_64_slice2vol_reg/epoch_'+str(start_epoch)+'.pth'
 
 
 # training files
@@ -65,7 +74,7 @@ randstack_transforms = Compose(
         CopyItemsd(keys=["image"], names=["stack"]),
         RandMakeStackd(keys=["stack"], stack_axis=0),
         Resized(keys=["stack"], spatial_size=[64, 64, 64]),
-        
+
         #ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
         # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
@@ -118,8 +127,10 @@ max_epochs = 5000
 epoch_loss_values = []
 epoch_loss_valid = []
 
+if PRETRAINED = True:
+    model.load_state_dict(torch.load('./model_64_slice2vol_reg/epoch_400.pth'))
 
-for epoch in range(max_epochs):
+for epoch in range(start_epoch,max_epochs):
     print("-" * 10)
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
@@ -136,9 +147,10 @@ for epoch in range(max_epochs):
             slice_ind = torch.tensor(range(4*(sliceno), 4*sliceno+1))
 
             for s in range(batch_size):
-                dir = 0 #batch_data['dir'][s]
+                dir = 0  # batch_data['dir'][s]
                 if dir == 0:
-                    fixed[s, :, slice_ind, :, :] = batch_data['stack'][s, :, slice_ind, :, :]
+                    fixed[s, :, slice_ind, :,
+                          :] = batch_data['stack'][s, :, slice_ind, :, :]
                 elif dir == 1:
                     fixed[s, :, :, slice_ind,
                           :] = batch_data['stack'][s, :, :, slice_ind, :]
@@ -165,7 +177,7 @@ for epoch in range(max_epochs):
         torch.save(model.state_dict(),
                    './model_64_slice2vol_reg/epoch_'+str(epoch)+'.pth')
         valid_loss = 0
- 
+
         # Calculate validation loss
         model.eval()
 
@@ -181,23 +193,25 @@ for epoch in range(max_epochs):
                 slice_ind = torch.tensor(range(4*sliceno, 4*sliceno+1))
 
                 for s in range(batch_size):
-                    dir = 0 #batch_data['dir'][s]
+                    dir = 0  # batch_data['dir'][s]
                     if dir == 0:
-                        valid_fixed[s, :, slice_ind, :, :] = valid_batch_data['stack'][s, :, slice_ind, :, :].to(device)
+                        valid_fixed[s, :, slice_ind, :, :] = valid_batch_data['stack'][s, :, slice_ind, :, :].to(
+                            device)
                     elif dir == 1:
-                        valid_fixed[s, :, :, slice_ind, :] = valid_batch_data['stack'][s, :, :, slice_ind, :].to(device)
+                        valid_fixed[s, :, :, slice_ind, :] = valid_batch_data['stack'][s, :, :, slice_ind, :].to(
+                            device)
                     elif dir == 2:
-                        valid_fixed[s, :, :, :, slice_ind] = valid_batch_data['stack'][s, :, :, :, slice_ind].to(device)
-
+                        valid_fixed[s, :, :, :, slice_ind] = valid_batch_data['stack'][s, :, :, :, slice_ind].to(
+                            device)
 
                 with torch.no_grad():
                     ddf = model(torch.cat((valid_moving, valid_fixed), dim=1))
                     valid_out_image = warp_layer(valid_moving, ddf)
 
                 valid_loss += image_loss(valid_out_image, valid_fixed).item()
-            
+
         valid_loss /= valid_step
-        
+
         epoch_loss_valid.append(valid_loss)
 
         print(f"validation loss: {valid_loss:.4f}")
@@ -205,7 +219,7 @@ for epoch in range(max_epochs):
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
     np.savez('svr_reg_epoch_loss_values_on_the_fly.npz',
-            epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
+             epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 
 
 print('Done!')
