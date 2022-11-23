@@ -128,7 +128,7 @@ epoch_loss_values = []
 epoch_loss_valid = []
 
 if PRETRAINED:
-    model.load_state_dict(torch.load('./model_64_slice2vol_reg/epoch_400.pth'))
+    model.load_state_dict(torch.load(trained_model_file))
 
 for epoch in range(start_epoch,max_epochs):
     print("-" * 10)
