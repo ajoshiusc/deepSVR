@@ -130,7 +130,7 @@ epoch_loss_valid = []
 if PRETRAINED:
     model.load_state_dict(torch.load(trained_model_file))
 
-for epoch in range(start_epoch,max_epochs):
+for epoch in range(start_epoch, max_epochs):
     print("-" * 10)
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
