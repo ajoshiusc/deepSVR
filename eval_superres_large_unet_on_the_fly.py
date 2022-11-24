@@ -19,7 +19,7 @@ from monai.networks.nets import unet
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -38,6 +38,8 @@ image_files = glob('./normal_mris_data/sub*/sub-*_T2w_image.nii.gz')
 
 sublist_full = glob(
     './feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
+
+sublist_full = glob('/project/ajoshi_27/HCP_All/*/T1w/T1*.nii.gz')
 
 
 # training files
@@ -92,7 +94,7 @@ stack = check_data["stacks"]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
-
+""" 
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
@@ -102,7 +104,7 @@ plt.title("stack")
 plt.imshow(stack[0, 0, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
-plt.show()
+plt.show() """
 
 train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
