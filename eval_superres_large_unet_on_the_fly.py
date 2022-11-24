@@ -156,8 +156,9 @@ for batch_data in val_loader:
     pred_image = model(stacks)
     break
 
-image = image.numpy()[:, 0]
-stack0 = stacks.numpy()[:, 0]
+
+image = image.cpu().numpy()[:, 0]
+stack0 = stacks.cpu().numpy()[:, 0]
 pred_image = pred_image.detach().numpy()[:, 0]
 
 for i in range(batch_size):
