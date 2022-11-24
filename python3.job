@@ -10,7 +10,7 @@
 eval "$(conda shell.bash hook)"
 
 conda activate py3
-cd /project/ajoshi_27/code_farm/brainseg
+cd /project/ajoshi_27/code_farm/deepSVR
 
 echo "Running: python " $1
 
