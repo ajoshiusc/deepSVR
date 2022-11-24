@@ -111,7 +111,7 @@ train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
 
-device = "cpu" # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = unet.UNet(
     spatial_dims=3,
