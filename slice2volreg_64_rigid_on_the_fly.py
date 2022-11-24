@@ -38,7 +38,7 @@ print_config()
 sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
-PRETRAINED = True
+PRETRAINED = False
 
 if PRETRAINED:
     start_epoch = 2790
@@ -144,7 +144,7 @@ for epoch in range(start_epoch,max_epochs):
             batch_size = moving.shape[0]
 
             fixed = torch.zeros(batch_size, 1, 64, 64, 64)
-            slice_ind = torch.tensor(range(4*(sliceno), 4*sliceno+1))
+            slice_ind = torch.tensor(range(4*sliceno, (4*sliceno)+1))
 
             for s in range(batch_size):
                 dir = 0  # batch_data['dir'][s]
@@ -190,7 +190,7 @@ for epoch in range(start_epoch,max_epochs):
                 batch_size = valid_batch_data['stack'].shape[0]
 
                 valid_fixed = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
-                slice_ind = torch.tensor(range(4*sliceno, 4*sliceno+1))
+                slice_ind = torch.tensor(range(4*sliceno, 4*(sliceno+1)))
 
                 for s in range(batch_size):
                     dir = 0  # batch_data['dir'][s]
