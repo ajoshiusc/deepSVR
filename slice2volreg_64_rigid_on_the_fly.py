@@ -144,7 +144,7 @@ for epoch in range(start_epoch,max_epochs):
             batch_size = moving.shape[0]
 
             fixed = torch.zeros(batch_size, 1, 64, 64, 64)
-            slice_ind = torch.tensor(range(4*sliceno, (4*sliceno)+1))
+            slice_ind = torch.tensor(range(4*sliceno, 4*(sliceno+1)))
 
             for s in range(batch_size):
                 dir = 0  # batch_data['dir'][s]
