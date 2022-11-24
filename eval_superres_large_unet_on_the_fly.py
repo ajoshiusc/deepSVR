@@ -152,7 +152,7 @@ val_ds = CacheDataset(data=training_datadict[0:16], transform=randstack_transfor
 val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
 for batch_data in val_loader:
     image = batch_data["image"].to(device)
-    stacks = batch_data["stacks"]
+    stacks = batch_data["stacks"].to(device)
     pred_image = model(stacks)
     break
 
