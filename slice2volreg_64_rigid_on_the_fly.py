@@ -38,10 +38,10 @@ print_config()
 sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
-PRETRAINED = False
+PRETRAINED = True
 
 if PRETRAINED:
-    start_epoch = 2790
+    start_epoch = 2580
 else:
     start_epoch = 0
 
@@ -130,7 +130,7 @@ epoch_loss_valid = []
 if PRETRAINED:
     model.load_state_dict(torch.load(trained_model_file))
 
-for epoch in range(start_epoch, max_epochs):
+for epoch in range(start_epoch+1, max_epochs):
     print("-" * 10)
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
@@ -218,7 +218,7 @@ for epoch in range(start_epoch, max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('svr_reg_epoch_loss_values_on_the_fly.npz',
+    np.savez('svr_reg_epoch_loss_values_on_the_fly_2.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 
 
