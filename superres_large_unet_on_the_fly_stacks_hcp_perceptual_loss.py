@@ -105,7 +105,7 @@ valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
 valid_loader = DataLoader(valid_ds, batch_size=10, shuffle=True, num_workers=2)
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = 'cpu' #torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = unet.UNet(
     spatial_dims=3,
@@ -116,7 +116,8 @@ model = unet.UNet(
     kernel_size=5,
     up_kernel_size=5,
     num_res_units=3).to(device)
-image_loss = percp_loss
+
+image_loss = percp_loss.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
@@ -149,7 +150,7 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
-                   './model_64_unet_large_lrem4_hcp/epoch_'+str(epoch)+'.pth')
+                   './model_64_unet_large_lrem4_hcp_perceptual_loss/epoch_'+str(epoch)+'.pth')
 
         # run validation
 
