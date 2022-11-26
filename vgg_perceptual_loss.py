@@ -85,9 +85,9 @@ class VGGPerceptualLoss(torch.nn.Module):
     def forward(self, input, target, feature_layers=[0, 1, 2, 3], style_layers=[]):
 
         if len(input.shape)==4:
-            loss = self.forward2D(self, input, target, feature_layers=[0, 1, 2, 3], style_layers=[])
+            loss = self.forward2D(input, target, feature_layers=feature_layers, style_layers=style_layers)
         elif len(input.shape)==5:
-            loss = self.forward3D(self, input, target, feature_layers=[0, 1, 2, 3], style_layers=[])
+            loss = self.forward3D(input, target, feature_layers=feature_layers, style_layers=style_layers)
 
         return loss
 
