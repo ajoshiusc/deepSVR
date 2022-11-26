@@ -121,7 +121,7 @@ image_loss = percp_loss.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-max_epochs = 5000
+max_epochs = 50000
 epoch_loss_values = []
 epoch_loss_valid = []
 
