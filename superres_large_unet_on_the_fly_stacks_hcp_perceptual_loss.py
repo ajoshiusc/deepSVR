@@ -105,7 +105,7 @@ valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
 valid_loader = DataLoader(valid_ds, batch_size=10, shuffle=True, num_workers=2)
 
 
-device = 'cpu' #torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = unet.UNet(
     spatial_dims=3,
