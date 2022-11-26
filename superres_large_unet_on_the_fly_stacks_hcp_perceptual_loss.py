@@ -1,15 +1,12 @@
-#!python
-#AUM Shree Ganeshaya Namha
-
 from monai.utils import set_determinism, first
 from monai.transforms import (
     EnsureChannelFirstD,
     Compose, ConcatItemsd,
-    LoadImageD,CopyItemsd,
-    RandRotateD,RandAffined,
-    RandZoomD,CropForegroundd,
-    GaussianSmoothd, RandGaussianSmoothd,
-    ScaleIntensityRangePercentilesd, Resized
+    LoadImageD,
+    RandRotateD,
+    RandZoomD,
+    GaussianSmoothd, RandGaussianSmoothd, CopyItemsd, CropForegroundd,
+    ScaleIntensityRangePercentilesd, Resized, RandAffined
 )
 from monai.data import DataLoader, Dataset, CacheDataset
 from monai.config import print_config, USE_COMPILED
@@ -25,23 +22,16 @@ import tempfile
 from glob import glob
 from monai.data.nifti_writer import write_nifti
 from transforms import RandMakeStackd
+from vgg_perceptual_loss import VGGPerceptualLoss
 
-
-MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_l1loss/epoch_360.pth'
-#MODEL_FILE = '/home/ajoshi/epoch_370.pth'
 
 print_config()
-set_determinism(42)
+# set_determinism(42)
 
+#sublist_full = glob('/project/ajoshi_27/HCP_All/*/T1w/T1*.nii.gz')
+sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
-image_files = glob('./normal_mris_data/sub*/sub-*_T2w_image.nii.gz')
-
-sublist_full = glob(
-    './feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
-
-sublist_full = glob('/project/ajoshi_27/HCP_All/*/T1w/T1*.nii.gz')
-
-
+percp_loss = VGGPerceptualLoss()
 # training files
 
 subfiles_train = sublist_full[:60]
@@ -57,7 +47,6 @@ valid_datadict = [{"image": item} for item in subfiles_val]
 #training_datadict = d0 + d1 + d2 + d3 + d4 + d5
 
 #print("\n first training items: ", training_datadict)
-
 
 randstack_transforms = Compose(
     [
@@ -85,30 +74,35 @@ randstack_transforms = Compose(
     ]
 )
 
-
 check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)
 check_data = first(check_loader)
-image = check_data["image"]
-stack = check_data["stacks"]
+image = check_data["image"][0][0]
+stack = check_data["stack0"][0][0]
 
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
-""" 
-plt.figure("check", (12, 6))
+
+'''plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
-plt.imshow(image[0, 0, 32], cmap="gray")
+plt.imshow(image[:, :, 32], cmap="gray")
 plt.subplot(1, 2, 2)
-plt.title("stack")
-plt.imshow(stack[0, 0, 32], cmap="gray")
+plt.title("stack0")
+plt.imshow(stack[:, :, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
-plt.show() """
+plt.show()
+'''
 
 train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
+
+
+valid_ds = CacheDataset(data=valid_datadict, transform=randstack_transforms,
+                        cache_rate=1.0, num_workers=4)
+valid_loader = DataLoader(valid_ds, batch_size=10, shuffle=True, num_workers=2)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -119,49 +113,71 @@ model = unet.UNet(
     out_channels=1,
     channels=(16, 32, 64, 128, 256, 512),
     strides=(2, 2, 2, 2, 2),
-    kernel_size = 5,
-    up_kernel_size= 5,
+    kernel_size=5,
+    up_kernel_size=5,
     num_res_units=3).to(device)
+image_loss = percp_loss
 
-'''#small u net
-model = unet.UNet(
-    spatial_dims=3,
-    in_channels=6,  # moving and fixed
-    out_channels=1,
-    channels=(16, 32, 64, 128, 256),
-    strides=(2, 2, 2, 2),
-    num_res_units=2).to(device)
-'''
+optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-image_loss = MSELoss()
-
-optimizer = torch.optim.Adam(model.parameters(), 1e-3)
-
-max_epochs = 4880
+max_epochs = 5000
 epoch_loss_values = []
+epoch_loss_valid = []
 
+for epoch in range(max_epochs):
+    print("-" * 10)
+    print(f"epoch {epoch + 1}/{max_epochs}")
+    model.train()
+    epoch_loss, step = 0, 0
+    for batch_data in train_loader:
+        step += 1
+        optimizer.zero_grad()
 
-# load weights
-model.load_state_dict(torch.load(MODEL_FILE))
-model.eval()
+        image = batch_data["image"].to(device)
+        stacks = batch_data["stacks"].to(device)
 
+        out_image = model(stacks)
 
-batch_size=16
-val_ds = CacheDataset(data=training_datadict[0:16], transform=randstack_transforms,
-                      cache_rate=1.0, num_workers=0)
-val_loader = DataLoader(val_ds, batch_size=16, num_workers=0)
-for batch_data in val_loader:
-    image = batch_data["image"].to(device)
-    stacks = batch_data["stacks"].to(device)
-    pred_image = model(stacks)
-    break
+        loss = image_loss(image, out_image)
+        loss.backward()
+        optimizer.step()
+        epoch_loss += loss.item()
+        #print(f"{step}/{len(train_ds) // train_loader.batch_size}, "f"train_loss: {loss.item():.4f}")
 
+    epoch_loss /= step
+    epoch_loss_values.append(epoch_loss)
 
-image = image.cpu().numpy()[:, 0]
-stack0 = stacks.cpu().numpy()[:, 0]
-pred_image = pred_image.detach().cpu().numpy()[:, 0]
+    if np.mod(epoch, 10) == 0:
+        torch.save(model.state_dict(),
+                   './model_64_unet_large_lrem4_hcp/epoch_'+str(epoch)+'.pth')
 
-for i in range(batch_size):
-    write_nifti(image[i],'image'+str(i)+'.nii.gz')
-    write_nifti(stack0[i],'stack0'+str(i)+'.nii.gz')
-    write_nifti(pred_image[i],'pred_img'+str(i)+'.nii.gz')
+        # run validation
+
+        valid_step = 0
+        for valid_batch_data in valid_loader:
+            valid_step += 1
+            valid_loss = 0
+            valid_image = valid_batch_data["image"].to(device)
+            valid_stacks = valid_batch_data["stacks"].to(device)
+
+            model.eval()
+            with torch.no_grad():
+                valid_out_image = model(valid_stacks)
+
+            valid_loss += image_loss(valid_image, valid_out_image).item()
+
+        valid_loss /= valid_step
+        epoch_loss_valid.append(valid_loss)
+
+        print(f"validation loss: {valid_loss:.4f}")
+
+    print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+
+    np.savez('large_unet_on_the_fly_loss_values_hcp_perceptual_loss.npz',
+             epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
+'''plt.plot(epoch_loss_values)
+plt.savefig('epochs1em4.png')
+
+plt.show()
+'''
+print("done")
