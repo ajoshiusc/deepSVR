@@ -6,7 +6,7 @@ import torchvision
 
 
 class VGGPerceptualLoss(torch.nn.Module):
-    def __init__(self, resize=True):
+    def __init__(self, resize=True, im_size=224):
         super(VGGPerceptualLoss, self).__init__()
         blocks = []
         blocks.append(torchvision.models.vgg16(
@@ -27,6 +27,7 @@ class VGGPerceptualLoss(torch.nn.Module):
             [0.485, 0.456, 0.406]).view(1, 3, 1, 1))
         self.register_buffer("std", torch.tensor(
             [0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+        self.IM_SIZE = im_size
 
     def forward2D(self, input, target, feature_layers=[0, 1, 2, 3], style_layers=[]):
         if input.shape[1] != 3:
@@ -36,9 +37,9 @@ class VGGPerceptualLoss(torch.nn.Module):
         target = (target-self.mean) / self.std
         if self.resize:
             input = self.transform(input, mode='bilinear', size=(
-                224, 224), align_corners=False)
+                self.IM_SIZE, self.IM_SIZE), align_corners=False)
             target = self.transform(target, mode='bilinear', size=(
-                224, 224), align_corners=False)
+                self.IM_SIZE, self.IM_SIZE), align_corners=False)
         loss = 0.0
         x = input
         y = target
