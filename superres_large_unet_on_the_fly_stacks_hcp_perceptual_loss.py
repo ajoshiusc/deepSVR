@@ -31,7 +31,7 @@ print_config()
 #sublist_full = glob('/project/ajoshi_27/HCP_All/*/T1w/T1*.nii.gz')
 sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
-percp_loss = VGGPerceptualLoss(im_size=64)
+percp_loss = VGGPerceptualLoss(im_size=32)
 # training files
 
 subfiles_train = sublist_full[:60]
