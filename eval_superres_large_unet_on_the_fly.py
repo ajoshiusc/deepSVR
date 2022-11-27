@@ -66,7 +66,7 @@ randstack_transforms = Compose(
         CropForegroundd(keys=["image"], source_key="image"),
         Resized(keys=["image"], spatial_size=[64, 64, 64]),
         ScaleIntensityRangePercentilesd(
-            keys=["image"], lower=2, upper=98, b_min=0.0, b_max=10.0, clip=True),
+            keys=["image"], lower=2, upper=98, b_min=0.02, b_max=0.98, clip=True),
         # make stacks
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
             np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
