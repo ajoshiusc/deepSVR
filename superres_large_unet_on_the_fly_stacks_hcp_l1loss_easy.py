@@ -146,7 +146,7 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
-                   './model_64_unet_large_lrem4_hcp_l1loss/epoch_'+str(epoch)+'.pth')
+                   './model_64_unet_large_lrem4_hcp_l1loss_easy/epoch_'+str(epoch)+'.pth')
 
         # run validation
 
