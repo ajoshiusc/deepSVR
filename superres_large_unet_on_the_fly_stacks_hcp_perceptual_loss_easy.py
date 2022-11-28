@@ -174,7 +174,7 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('large_unet_on_the_fly_loss_values_hcp_perceptual_loss.npz',
+    np.savez('large_unet_on_the_fly_loss_values_hcp_perceptual_loss_easy.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
