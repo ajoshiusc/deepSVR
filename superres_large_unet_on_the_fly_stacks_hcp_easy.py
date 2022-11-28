@@ -16,7 +16,7 @@ from monai.networks.nets import unet
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os
 import tempfile
 from glob import glob
@@ -82,6 +82,7 @@ stack = check_data["stack0"][0][0]
 print(f"image shape: {image.shape}")
 print(f"stack shape: {stack.shape}")
 
+"""
 plt.figure("check", (12, 6))
 plt.subplot(1, 2, 1)
 plt.title("image")
@@ -91,7 +92,8 @@ plt.title("stack0")
 plt.imshow(stack[:, :, 32], cmap="gray")
 plt.savefig('sample_data.png')
 
-plt.show()
+plt.show() 
+"""
 
 
 train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
