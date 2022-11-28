@@ -24,7 +24,7 @@ import os
 import tempfile
 from glob import glob
 from monai.data.nifti_writer import write_nifti
-from transforms import RandMakeStackd
+from easy_transforms import RandMakeStackd
 
 
 MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_perceptual_loss/epoch_1250.pth'
