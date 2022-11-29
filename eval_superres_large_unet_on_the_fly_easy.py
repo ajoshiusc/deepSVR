@@ -27,7 +27,7 @@ from monai.data.nifti_writer import write_nifti
 from easy_transforms import RandMakeStackd
 
 
-MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_1060.pth'
+MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_10.pth'
 #MODEL_FILE = '/home/ajoshi/epoch_370.pth'
 
 print_config()
