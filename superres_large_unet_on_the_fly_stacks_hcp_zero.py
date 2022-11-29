@@ -172,7 +172,10 @@ for epoch in range(max_epochs):
             with torch.no_grad():
                 valid_out_image = model(valid_stacks)
 
-            valid_loss += image_loss(valid_image, valid_out_image).item()
+            m = image_loss_m(image, out_image)
+            valid_loss += m
+            
+            #valid_loss += image_loss(valid_image, valid_out_image).item()
 
         valid_loss /= valid_step
         epoch_loss_valid.append(valid_loss)
