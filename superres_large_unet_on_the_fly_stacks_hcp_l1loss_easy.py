@@ -45,6 +45,7 @@ valid_datadict = [{"image": item} for item in subfiles_val]
 
 #print("\n first training items: ", training_datadict)
 
+
 randstack_transforms = Compose(
     [
         LoadImageD(keys=["image"]),
@@ -59,8 +60,9 @@ randstack_transforms = Compose(
         CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
                    "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
 
-        RandMakeStackd(keys=["stack0", "stack1", "stack2",
-                       "stack3", "stack4", "stack5"], stack_axis=0),
+        RandMakeStackd(keys=["stack0", "stack1"], stack_axis=0),
+        RandMakeStackd(keys=["stack2", "stack3"], stack_axis=1),
+        RandMakeStackd(keys=["stack4", "stack5"], stack_axis=2),
 
         Resized(keys=["stack0", "stack1", "stack2", "stack3",
                 "stack4", "stack5"], spatial_size=[64, 64, 64]),
