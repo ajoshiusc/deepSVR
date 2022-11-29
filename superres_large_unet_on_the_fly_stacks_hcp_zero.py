@@ -173,7 +173,7 @@ for epoch in range(max_epochs):
                 valid_out_image = model(valid_stacks)
 
             m = image_loss_m(image, out_image)
-            valid_loss += m
+            valid_loss += m.item()
 
             #valid_loss += image_loss(valid_image, valid_out_image).item()
 
