@@ -161,9 +161,20 @@ for batch_data in val_loader:
 
 image = image.cpu().numpy()[:, 0]
 stack0 = stacks.cpu().numpy()[:, 0]
+stack1 = stacks.cpu().numpy()[:, 1]
+stack2 = stacks.cpu().numpy()[:, 2]
+stack3 = stacks.cpu().numpy()[:, 3]
+stack4 = stacks.cpu().numpy()[:, 4]
+stack5 = stacks.cpu().numpy()[:, 5]
+
 pred_image = pred_image.detach().cpu().numpy()[:, 0]
 
 for i in range(batch_size):
     write_nifti(image[i],'image'+str(i)+'.nii.gz')
     write_nifti(stack0[i],'stack0'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack1'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack2'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack3'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack4'+str(i)+'.nii.gz')
+    write_nifti(stack0[i],'stack5'+str(i)+'.nii.gz')
     write_nifti(pred_image[i],'pred_img'+str(i)+'.nii.gz')
