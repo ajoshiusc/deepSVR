@@ -157,7 +157,7 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
         torch.save(model.state_dict(),
-                   './model_64_unet_large_lrem4_hcp_perceptual_loss_zero/epoch_'+str(epoch)+'.pth')
+                   './model_64_unet_large_lrem4_hcp_zero/epoch_'+str(epoch)+'.pth')
 
         # run validation
 
@@ -174,7 +174,7 @@ for epoch in range(max_epochs):
 
             m = image_loss_m(image, out_image)
             valid_loss += m
-            
+
             #valid_loss += image_loss(valid_image, valid_out_image).item()
 
         valid_loss /= valid_step
@@ -184,7 +184,7 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('large_unet_on_the_fly_loss_values_hcp_perceptual_loss_zero.npz',
+    np.savez('large_unet_on_the_fly_loss_values_hcp_zero.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
