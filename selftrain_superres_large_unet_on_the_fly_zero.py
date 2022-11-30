@@ -135,37 +135,37 @@ image_loss = MSELoss()
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
-max_epochs = 50
+max_epochs = 50000
 epoch_loss_values = []
 
+
+batch_data = first(train_loader)
+image = batch_data["image"].to(device)
+stacks = batch_data["stacks"].to(device)
 
 for epoch in range(max_epochs):
     print("-" * 10)
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
     epoch_loss, step = 0, 0
-    for batch_data in train_loader:
-        step += 1
-        optimizer.zero_grad()
+    step += 1
+    optimizer.zero_grad()
 
-        image = batch_data["image"].to(device)
-        stacks = batch_data["stacks"].to(device)
+    out_image = model(stacks)
+    pred_stack0 = resize_x_down(out_image[0])
+    pred_stack0 = resize_up(pred_stack0)
+    
+    pred_stack2 = resize_y_down(out_image[0])
+    pred_stack2 = resize_up(pred_stack2)
 
-        out_image = model(stacks)
-        pred_stack0 = resize_x_down(out_image[0])
-        pred_stack0 = resize_up(pred_stack0)
-        
-        pred_stack2 = resize_y_down(out_image[0])
-        pred_stack2 = resize_up(pred_stack2)
-
-        pred_stack4 = resize_z_down(out_image[0])
-        pred_stack4 = resize_up(pred_stack4)
+    pred_stack4 = resize_z_down(out_image[0])
+    pred_stack4 = resize_up(pred_stack4)
 
 
-        loss = image_loss(stacks[:,0], pred_stack0) + image_loss(stacks[:,2], pred_stack2) + image_loss(stacks[:,4], pred_stack4)
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
+    loss = image_loss(stacks[:,0], pred_stack0) + image_loss(stacks[:,2], pred_stack2) + image_loss(stacks[:,4], pred_stack4)
+    loss.backward()
+    optimizer.step()
+    epoch_loss += loss.item()
         #print(f"{step}/{len(train_ds) // train_loader.batch_size}, "f"train_loss: {loss.item():.4f}")
 
     epoch_loss /= step
@@ -173,6 +173,6 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    if epoch % 10 == 0:
+    if epoch % 100 == 0:
         write_nifti(out_image[0,0].detach().cpu().numpy(), f'self_train_{epoch}.nii.gz')
 
