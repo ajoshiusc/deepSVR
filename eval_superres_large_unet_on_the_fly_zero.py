@@ -26,7 +26,7 @@ from glob import glob
 from monai.data.nifti_writer import write_nifti
 from easy_transforms import RandMakeStackd
 
-MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_1860.pth'
+MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_zero/epoch_1860.pth'
 
 #MODEL_FILE = '/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_800.pth'
 #MODEL_FILE = '/home/ajoshi/epoch_370.pth'
@@ -61,6 +61,7 @@ valid_datadict = [{"image": item} for item in subfiles_val]
 
 
 
+
 randstack_transforms = Compose(
     [
         LoadImageD(keys=["image"]),
@@ -75,9 +76,9 @@ randstack_transforms = Compose(
         CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
                    "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
 
-        RandMakeStackd(keys=["stack0", "stack1"], stack_axis=0),
-        RandMakeStackd(keys=["stack2", "stack3"], stack_axis=1),
-        RandMakeStackd(keys=["stack4", "stack5"], stack_axis=2),
+        Resized(keys=["stack0", "stack1"], spatial_size=[32, 64, 64]),
+        Resized(keys=["stack2", "stack3"], spatial_size=[64, 32, 64]),
+        Resized(keys=["stack4", "stack5"], spatial_size=[64, 64, 32]),
 
         Resized(keys=["stack0", "stack1", "stack2", "stack3",
                 "stack4", "stack5"], spatial_size=[64, 64, 64]),
@@ -87,6 +88,7 @@ randstack_transforms = Compose(
         # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
+
 
 
 check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
