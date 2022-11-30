@@ -30,6 +30,16 @@ sublist_full = glob('/project/ajoshi_27/HCP_All/*/T1w/T1*.nii.gz')
 #sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
+PRETRAINED = True
+
+if PRETRAINED:
+    start_epoch = 580
+else:
+    start_epoch = 0
+
+trained_model_file = './model_64_unet_large_lrem4_hcp_easy/epoch_'+str(start_epoch)+'.pth'
+
+
 # training files
 
 subfiles_train = sublist_full[:60]
@@ -117,7 +127,15 @@ model = unet.UNet(
     kernel_size=5,
     up_kernel_size=5,
     num_res_units=3).to(device)
+
+
+if PRETRAINED:
+    model.load_state_dict(torch.load(trained_model_file))
+
+
+
 image_loss = MSELoss()
+
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
@@ -125,7 +143,7 @@ max_epochs = 5000
 epoch_loss_values = []
 epoch_loss_valid = []
 
-for epoch in range(max_epochs):
+for epoch in range(start_epoch+1, max_epochs):
     print("-" * 10)
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
@@ -174,7 +192,7 @@ for epoch in range(max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('large_unet_on_the_fly_loss_values_hcp_easy.npz',
+    np.savez('large_unet_on_the_fly_loss_values_hcp_easy_2.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 '''plt.plot(epoch_loss_values)
 plt.savefig('epochs1em4.png')
