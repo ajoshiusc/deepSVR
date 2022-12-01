@@ -137,7 +137,7 @@ model = unet.UNet(
 
 image_loss = MSELoss()
 
-model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_230.pth'))
+model.load_state_dict(torch.load('./model_64_unet_large_lrem4/epoch_100.pth'))
 
 optimizer = torch.optim.Adam(model.parameters(), 1e-4)
 
