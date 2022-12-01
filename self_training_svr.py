@@ -132,8 +132,8 @@ superres = unet.UNet(
 reg.train()
 #superres.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_1070.pth'));
 superres.train()
-optimizerR = torch.optim.Adam(reg.parameters(), 1e-4)
-optimizerS = torch.optim.Adam(superres.parameters(), 1e-4)
+optimizerR = torch.optim.Adam(reg.parameters(), 1e-5)
+optimizerS = torch.optim.Adam(superres.parameters(), 1e-5)
 
 max_epochs = 500000
 for epoch in range(max_epochs):
@@ -145,7 +145,6 @@ for epoch in range(max_epochs):
         #valid_moving = image.detach().to(device)
         batch_size = stacks.shape[0]
 
-        slice_vol = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
         slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
 
         for d in range(6):
@@ -154,6 +153,7 @@ for epoch in range(max_epochs):
             optimizerS.zero_grad()
 
             recon_image = superres(stacks)
+            slice_vol = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
 
             if int(d/2)==0:
                 slice_vol[0, :, slice_ind, :, :] = stacks[0, d, slice_ind, :, :].to(
@@ -177,6 +177,8 @@ for epoch in range(max_epochs):
             optimizerS.step()
 
         vol_loss += slice_loss
+
+    write_nifti(recon_image[0,0],f'deepsvr_recon_{epoch}.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
