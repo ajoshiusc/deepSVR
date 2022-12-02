@@ -8,7 +8,7 @@ from monai.transforms import (
     GaussianSmoothd, RandGaussianSmoothd,
     ScaleIntensityRangePercentilesd, Resized
 )
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from network_mods import GlobalNetRigid
 from monai.data import DataLoader, Dataset, CacheDataset
 from monai.config import print_config, USE_COMPILED
@@ -29,15 +29,14 @@ from easy_transforms import RandMakeStackd
 set_determinism(42)
 
 
-image_files = glob('/project/ajoshi_27/code_farm/deepSVR/normal_mris_data/sub*/sub-*_T2w_image.nii.gz')
+#sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
-sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
-
+sublist_full = glob('/home/ajoshi/T1w*.nii.gz')
 
 
 # training files
 
-subfiles_train = sublist_full[7:8]
+subfiles_train = sublist_full[0:1]
 
 
 training_datadict = [{"image": item} for item in subfiles_train]
@@ -90,6 +89,10 @@ train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
+resize_x_down = Resize(spatial_size=[32, 64, 64])
+resize_y_down = Resize(spatial_size=[64, 32, 64])
+resize_z_down = Resize(spatial_size=[64, 64, 32])
+resize_up = Resize(spatial_size=[64, 64, 64])
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -128,29 +131,36 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
-#reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_3980.pth'));
+reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
 reg.train()
-#superres.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_1070.pth'));
+superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-5)
 optimizerS = torch.optim.Adam(superres.parameters(), 1e-5)
+
+
+recon_image = superres(stacks)
+write_nifti(recon_image[0,0],f'outsvr/deepsvr_recon_orig.nii.gz')
+
+write_nifti(image[0,0],'outsvr/deepsvr_orig.nii.gz')
+
 
 max_epochs = 500000
 for epoch in range(max_epochs):
 
     vol_loss = 0
+    optimizerS.zero_grad()
 
-    for sliceno in range(int(64/2)):
+    for d in tqdm(range(6)):
 
-        #valid_moving = image.detach().to(device)
-        batch_size = stacks.shape[0]
+        for sliceno in range(int(64/2)):
 
-        slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
+            #valid_moving = image.detach().to(device)
+            batch_size = stacks.shape[0]
+            slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
 
-        for d in range(6):
 
             optimizerR.zero_grad()
-            optimizerS.zero_grad()
 
             recon_image = superres(stacks)
             slice_vol = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
@@ -170,15 +180,29 @@ for epoch in range(max_epochs):
             ddf = reg(torch.cat((recon_image, slice_vol), dim=1))
             recon_image_moved = warp_layer(recon_image, ddf)
 
-            slice_loss = image_loss(recon_image_moved, slice_vol)
+            if int(d/2)==0:
+                temp = resize_x_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==1:
+                temp = resize_y_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==2:
+                temp = resize_z_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+
+            slice_loss = image_loss(temp2, slice_vol[0])
 
             slice_loss.backward()
             optimizerR.step()
-            optimizerS.step()
 
-        vol_loss += slice_loss
+            vol_loss += slice_loss
+        
+    optimizerS.step()
 
-    write_nifti(recon_image[0,0],f'deepsvr_recon_{epoch}.nii.gz')
+    #vol_loss.backward()
+
+
+    write_nifti(recon_image[0,0],f'outsvr/deepsvr_recon_{epoch}.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
