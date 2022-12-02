@@ -136,7 +136,7 @@ reg.train()
 superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-5)
-optimizerS = torch.optim.Adam(superres.parameters(), 1e-4)
+optimizerS = torch.optim.Adam(superres.parameters(), 1e-5)
 
 
 recon_image = superres(stacks)
