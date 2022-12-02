@@ -199,6 +199,11 @@ for epoch in range(max_epochs):
         
     optimizerS.step()
 
+    if np.mod(epoch, 10) == 0:
+
+        torch.save(reg.state_dict(),'./outsvr/epoch_reg_'+str(epoch)+'.pth')
+        torch.save(superres.state_dict(),'./outsvr/epoch_superres_'+str(epoch)+'.pth')
+
     #vol_loss.backward()
 
 
