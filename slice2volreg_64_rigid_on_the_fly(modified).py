@@ -70,15 +70,22 @@ randstack_transforms = Compose(
         # make stacks
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
             np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
+        CopyItemsd(keys=["image", "image", "image", "image", "image", "image"], names=[
+                   "stack0", "stack1", "stack2", "stack3", "stack4", "stack5"]),
 
-        CopyItemsd(keys=["image"], names=["stack"]),
-        RandMakeStackd(keys=["stack"], stack_axis=0),
-        Resized(keys=["stack"], spatial_size=[64, 64, 64]),
+        RandMakeStackd(keys=["stack0", "stack1"], stack_axis=0),
+        RandMakeStackd(keys=["stack2", "stack3"], stack_axis=1),
+        RandMakeStackd(keys=["stack4", "stack5"], stack_axis=2),
 
-        #ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
+        Resized(keys=["stack0", "stack1", "stack2", "stack3",
+                "stack4", "stack5"], spatial_size=[64, 64, 64]),
+
+        ConcatItemsd(keys=["stack0", "stack1", "stack2",
+                     "stack3", "stack4", "stack5"], name='stacks'),
         # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
     ]
 )
+
 
 check_ds = Dataset(data=training_datadict, transform=randstack_transforms)
 check_loader = DataLoader(check_ds, batch_size=1, shuffle=True)

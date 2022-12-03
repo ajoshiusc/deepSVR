@@ -131,18 +131,18 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
-reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
+reg.load_state_dict(torch.load('outsvr_fetal_easy/reg_epoch_3980.pth'));
 reg.train()
-superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'));
+superres.load_state_dict(torch.load('outsvr_fetal_easy/superres_epoch_2020.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-5)
 optimizerS = torch.optim.Adam(superres.parameters(), 1e-5)
 
 
 recon_image = superres(stacks)
-write_nifti(recon_image[0,0],f'outsvr_fetal/deepsvr_recon_orig.nii.gz')
+write_nifti(recon_image[0,0],f'outsvr_fetal_easy/deepsvr_recon_orig.nii.gz')
 
-write_nifti(image[0,0],'outsvr_fetal/deepsvr_orig.nii.gz')
+write_nifti(image[0,0],'outsvr_fetal_easy/deepsvr_orig.nii.gz')
 
 
 max_epochs = 500000
@@ -201,13 +201,13 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
 
-        torch.save(reg.state_dict(),'./outsvr_fetal/epoch_reg_'+str(epoch)+'.pth')
-        torch.save(superres.state_dict(),'./outsvr_fetal/epoch_superres_'+str(epoch)+'.pth')
+        torch.save(reg.state_dict(),'./outsvr_fetal_easy/epoch_reg_'+str(epoch)+'.pth')
+        torch.save(superres.state_dict(),'./outsvr_fetal_easy/epoch_superres_'+str(epoch)+'.pth')
 
     #vol_loss.backward()
 
 
-    write_nifti(recon_image[0,0],f'outsvr_fetal/deepsvr_recon_{epoch}.nii.gz')
+    write_nifti(recon_image[0,0],f'outsvr_fetal_easy/deepsvr_recon_{epoch}.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
