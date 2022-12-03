@@ -163,6 +163,19 @@ for epoch in range(start_epoch+1, max_epochs):
             ddf = model(torch.cat((moving, fixed), dim=1))
             pred_image = warp_layer(moving, ddf)
 
+           if int(d/2)==0:
+                temp = resize_x_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==1:
+                temp = resize_y_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==2:
+                temp = resize_z_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+
+            slice_loss = image_loss(temp2, slice_vol[0])
+
+
             loss = image_loss(pred_image, fixed)
             loss.backward()
             optimizer.step()

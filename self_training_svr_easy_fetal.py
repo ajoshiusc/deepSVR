@@ -8,7 +8,7 @@ from monai.transforms import (
     GaussianSmoothd, RandGaussianSmoothd,
     ScaleIntensityRangePercentilesd, Resized
 )
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from network_mods import GlobalNetRigid
 from monai.data import DataLoader, Dataset, CacheDataset
 from monai.config import print_config, USE_COMPILED
@@ -29,15 +29,14 @@ from easy_transforms import RandMakeStackd
 set_determinism(42)
 
 
-image_files = glob('/project/ajoshi_27/code_farm/deepSVR/normal_mris_data/sub*/sub-*_T2w_image.nii.gz')
-
 sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
+#sublist_full = glob('/home/ajoshi/T1w*.nii.gz')
 
 
 # training files
 
-subfiles_train = sublist_full[7:8]
+subfiles_train = sublist_full[0:1]
 
 
 training_datadict = [{"image": item} for item in subfiles_train]
@@ -90,6 +89,10 @@ train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
+resize_x_down = Resize(spatial_size=[32, 64, 64])
+resize_y_down = Resize(spatial_size=[64, 32, 64])
+resize_z_down = Resize(spatial_size=[64, 64, 32])
+resize_up = Resize(spatial_size=[64, 64, 64])
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -128,98 +131,85 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
-#reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_3980.pth'));
+reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
 reg.train()
-#superres.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_1070.pth'));
+superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-5)
 optimizerS = torch.optim.Adam(superres.parameters(), 1e-5)
 
+
+recon_image = superres(stacks)
+write_nifti(recon_image[0,0],f'outsvr_fetal/deepsvr_recon_orig.nii.gz')
+
+write_nifti(image[0,0],'outsvr_fetal/deepsvr_orig.nii.gz')
+
+
 max_epochs = 500000
 for epoch in range(max_epochs):
-    
-    image = superres(stacks.detach())
-    
-    valid_loss = 0
-    valid_step = 0
-    for sliceno in tqdm(range(int(64/2))):
-            valid_step += 1
 
-            valid_moving = image.detach().to(device)
+    vol_loss = 0
+    optimizerS.zero_grad()
+
+    for d in tqdm(range(6)):
+
+        for sliceno in range(int(64/2)):
+
+            #valid_moving = image.detach().to(device)
             batch_size = stacks.shape[0]
-
-            valid_fixed = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
             slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
 
-            for s in range(batch_size):
-                for d in range(6):
-                    if int(d/2)==0:
-                        valid_fixed[s, :, slice_ind, :, :] = stacks[s, d, slice_ind, :, :].to(
-                        device)
 
-                    elif int(d/2)==1:
-                        valid_fixed[s, :, :, slice_ind, :] = stacks[s, d, :, slice_ind, :].to(
-                            device)
-                    elif int(d/2)==2:
-                        valid_fixed[s, :, :, :, slice_ind] = stacks[s, d, :, :, slice_ind].to(
-                            device)
+            optimizerR.zero_grad()
 
-            new_loss = image_loss(valid_moving, valid_fixed).item()
-            loss = new_loss + 1
-            n=1
-            while new_loss < loss:
-                optimizerR.zero_grad()
+            recon_image = superres(stacks)
+            slice_vol = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
 
-                ddf = reg(torch.cat((valid_moving, valid_fixed), dim=1))
-                valid_out_image = warp_layer(valid_moving, ddf)
+            if int(d/2)==0:
+                slice_vol[0, :, slice_ind, :, :] = stacks[0, d, slice_ind, :, :].to(
+                device)
 
-                loss = new_loss
-                new_loss = image_loss(valid_out_image, valid_fixed).item()
-                new_loss_TBU = image_loss(valid_out_image, valid_fixed)
-                new_loss_TBU.backward()
-                optimizerR.step()
-
-                n+=1
-
-                valid_moving = valid_out_image.detach()
+            elif int(d/2)==1:
+                slice_vol[0, :, :, slice_ind, :] = stacks[0, d, :, slice_ind, :].to(
+                    device)
+            elif int(d/2)==2:
+                slice_vol[0, :, :, :, slice_ind] = stacks[0, d, :, :, slice_ind].to(
+                    device)
 
 
+            ddf = reg(torch.cat((recon_image, slice_vol), dim=1))
+            recon_image_moved = warp_layer(recon_image, ddf)
 
-            valid_loss += loss
-            
-            
-    valid_loss = 0
-    valid_step = 0       
-    for sliceno in tqdm(range(int(64/2))):
-            optimizerS.zero_grad()
-            image = superres(stacks.detach())
-            
-            valid_step += 1
+            if int(d/2)==0:
+                temp = resize_x_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==1:
+                temp = resize_y_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
+            elif int(d/2)==2:
+                temp = resize_z_down(recon_image_moved[0])
+                temp2 = resize_up(temp)
 
-            valid_moving = image.to(device)
-            batch_size = stacks.shape[0]
+            slice_loss = image_loss(temp2, slice_vol[0])
 
-            valid_fixed = torch.zeros(batch_size, 1, 64, 64, 64).to(device)
-            slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
+            slice_loss.backward()
+            optimizerR.step()
 
-            for s in range(batch_size):
-                for d in range(6):
-                    if int(d/2)==0:
-                        valid_fixed[s, :, slice_ind, :, :] = stacks[s, d, slice_ind, :, :].to(
-                        device)
+            vol_loss += slice_loss
+        
+    optimizerS.step()
 
-                    elif int(d/2)==1:
-                        valid_fixed[s, :, :, slice_ind, :] = stacks[s, d, :, slice_ind, :].to(
-                            device)
-                    elif int(d/2)==2:
-                        valid_fixed[s, :, :, :, slice_ind] = stacks[s, d, :, :, slice_ind].to(
-                            device)
+    if np.mod(epoch, 10) == 0:
 
-            ddf = reg(torch.cat((valid_moving, valid_fixed), dim=1))
-            output = warp_layer(valid_moving, ddf)
-            superres_loss = image_loss(output, valid_fixed)
-            
-            superres_loss.backward()
-            optimizerS.step()
+        torch.save(reg.state_dict(),'./outsvr_fetal/epoch_reg_'+str(epoch)+'.pth')
+        torch.save(superres.state_dict(),'./outsvr_fetal/epoch_superres_'+str(epoch)+'.pth')
+
+    #vol_loss.backward()
+
+
+    write_nifti(recon_image[0,0],f'outsvr_fetal/deepsvr_recon_{epoch}.nii.gz')
+
+    print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
+   
     
 
