@@ -16,6 +16,7 @@ from monai.apps import MedNISTDataset
 from hard_transforms import RandMakeStackd
 slice_thickness = 4 # 4 for hard transforms, 2 for easy transforms
 
+from tqdm import tqdm
 import numpy as np
 import torch
 from torch.nn import MSELoss, CrossEntropyLoss
@@ -74,8 +75,8 @@ randstack_transforms = Compose(
         RandAffined(mode=("bilinear"), prob=1.0, translate_range=(5, 5, 5), rotate_range=(
             np.pi/4, np.pi/4, np.pi/4), padding_mode="zeros", keys=["image"]),
 
-        CopyItemsd(keys=["image"], names=["stackx", "stacky", "stackz"]),
-        RandMakeStackd(keys=["stackx"], stack_axis=0),RandMakeStackd(keys=["stackx"], stack_axis=1),RandMakeStackd(keys=["stackx"], stack_axis=2),
+        CopyItemsd(keys=["image","image","image"], names=["stackx", "stacky", "stackz"]),
+        RandMakeStackd(keys=["stackx"], stack_axis=0),RandMakeStackd(keys=["stacky"], stack_axis=1),RandMakeStackd(keys=["stackz"], stack_axis=2),
         Resized(keys=["stackx","stacky","stackz"], spatial_size=[64, 64, 64]),
 
         #ConcatItemsd(keys=["stack0", "stack1", "stack2", "stack3", "stack4", "stack5"], name='stacks'),
@@ -146,7 +147,8 @@ for epoch in range(start_epoch+1, max_epochs):
     model.train()
     epoch_loss, step = 0, 0
     for batch_data in train_loader:
-        for sliceno in range(int(64/slice_thickness)):
+        for sliceno in tqdm(range(int(64/slice_thickness))):
+
             step += 1
             optimizer.zero_grad()
 
@@ -157,35 +159,35 @@ for epoch in range(start_epoch+1, max_epochs):
             slice_ind = torch.tensor(range(slice_thickness*sliceno, slice_thickness*(sliceno+1))) # 4 for hard transform
 
             #for s in range(batch_size):
-            slice_vol[:, 0, slice_ind, :, :] = batch_data['stackx'][:, :, slice_ind, :, :]
-            slice_vol[:, 1, slice_ind, :, :] = batch_data['stacky'][:, :, :, slice_ind, :]
-            slice_vol[:, 2, slice_ind, :, :] = batch_data['stackz'][:, :, :, :, slice_ind]
+            slice_vol[:, 0, slice_ind, :, :] = batch_data['stackx'][:, 0, slice_ind, :, :]
+            slice_vol[:, 1, :, slice_ind, :] = batch_data['stacky'][:, 0, :, slice_ind, :]
+            slice_vol[:, 2, :, :, slice_ind] = batch_data['stackz'][:, 0, :, :, slice_ind]
 
             slice_vol = slice_vol.to(device)
 
-            ddf = model(torch.cat((image_vol, slice_vol[:,0]), dim=1))
-            pred_imagex = warp_layer(image_vol[:,0], ddf)
+            ddf = model(torch.cat((image_vol, slice_vol[:,0:1]), dim=1))
+            pred_imagex = warp_layer(image_vol, ddf)
             temp = resize_x_down(pred_imagex[0])
             temp2 = resize_up(temp)
-            slice_loss = image_loss(temp2, slice_vol)
+            slice_loss = image_loss(temp2, slice_vol[:,0:1])
             slice_loss.backward()
             optimizer.step()
             epoch_loss += slice_loss.item()
 
-            ddf = model(torch.cat((image_vol, slice_vol[:,1]), dim=1))
-            pred_imagex = warp_layer(image_vol[:,0], ddf)
-            temp = resize_x_down(pred_imagex[0])
+            ddf = model(torch.cat((image_vol, slice_vol[:,1:2]), dim=1))
+            pred_imagey = warp_layer(image_vol, ddf)
+            temp = resize_x_down(pred_imagey[0])
             temp2 = resize_up(temp)
-            slice_loss = image_loss(temp2, slice_vol)
+            slice_loss = image_loss(temp2, slice_vol[:,1:2])
             slice_loss.backward()
             optimizer.step()
             epoch_loss += slice_loss.item()
 
-            ddfx = model(torch.cat((image_vol[:,0], slice_vol), dim=1))
-            pred_imagex = warp_layer(image_vol[:,0], ddfx)
-            temp = resize_x_down(pred_imagex[0])
+            ddf = model(torch.cat((image_vol, slice_vol[:,2:3]), dim=1))
+            pred_imagez = warp_layer(image_vol, ddf)
+            temp = resize_x_down(pred_imagez[0])
             temp2 = resize_up(temp)
-            slice_loss = image_loss(temp2, slice_vol)
+            slice_loss = image_loss(temp2, slice_vol[:,2:3])
             slice_loss.backward()
             optimizer.step()
             epoch_loss += slice_loss.item()
@@ -201,7 +203,7 @@ for epoch in range(start_epoch+1, max_epochs):
     if np.mod(epoch, 10) == 0:
 
         torch.save(model.state_dict(),
-                   './model_64_slice2vol_reg_fetal/epoch_'+str(epoch)+'.pth')
+                   './model_64_slice2vol_reg_fetal_hard/epoch_'+str(epoch)+'.pth')
         valid_loss = 0
 
         # Calculate validation loss
@@ -244,7 +246,7 @@ for epoch in range(start_epoch+1, max_epochs):
 
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('svr_reg_epoch_loss_values_on_the_fly_fetal.npz',
+    np.savez('svr_reg_epoch_loss_values_on_the_fly_fetal_hard.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 
 
