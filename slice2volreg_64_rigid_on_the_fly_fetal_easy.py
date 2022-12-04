@@ -176,7 +176,7 @@ for epoch in range(start_epoch+1, max_epochs):
 
             ddf = model(torch.cat((image_vol, slice_vol[:,1:2]), dim=1))
             pred_imagey = warp_layer(image_vol, ddf)
-            temp = resize_x_down(pred_imagey[0])
+            temp = resize_y_down(pred_imagey[0])
             temp2 = resize_up(temp)
             slice_loss = image_loss(temp2, slice_vol[:,1:2])
             slice_loss.backward()
@@ -185,7 +185,7 @@ for epoch in range(start_epoch+1, max_epochs):
 
             ddf = model(torch.cat((image_vol, slice_vol[:,2:3]), dim=1))
             pred_imagez = warp_layer(image_vol, ddf)
-            temp = resize_x_down(pred_imagez[0])
+            temp = resize_z_down(pred_imagez[0])
             temp2 = resize_up(temp)
             slice_loss = image_loss(temp2, slice_vol[:,2:3])
             slice_loss.backward()
