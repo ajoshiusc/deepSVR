@@ -146,8 +146,8 @@ for epoch in range(start_epoch+1, max_epochs):
     print(f"epoch {epoch + 1}/{max_epochs}")
     model.train()
     epoch_loss, step = 0, 0
-    for batch_data in train_loader:
-        for sliceno in tqdm(range(int(64/slice_thickness))):
+    for batch_data in tqdm(train_loader):
+        for sliceno in range(int(64/slice_thickness)):
 
             step += 1
             optimizer.zero_grad()
