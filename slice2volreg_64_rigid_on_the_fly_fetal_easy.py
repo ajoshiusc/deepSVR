@@ -13,8 +13,8 @@ from monai.config import print_config, USE_COMPILED
 from network_mods import GlobalNetRigid
 from monai.networks.blocks import Warp
 from monai.apps import MedNISTDataset
-from hard_transforms import RandMakeStackd
-slice_thickness = 4 # 4 for hard transforms, 2 for easy transforms
+from easy_transforms import RandMakeStackd
+slice_thickness = 2# 4 for hard transforms, 2 for easy transforms
 
 from tqdm import tqdm
 import numpy as np
@@ -200,10 +200,10 @@ for epoch in range(start_epoch+1, max_epochs):
     if np.mod(epoch, 10) == 0:
 
         torch.save(model.state_dict(),
-                   './model_64_slice2vol_reg_fetal_hard/epoch_'+str(epoch)+'.pth')
+                   './model_64_slice2vol_reg_fetal_easy/epoch_'+str(epoch)+'.pth')
     print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    np.savez('svr_reg_epoch_loss_values_on_the_fly_fetal_hard.npz',
+    np.savez('svr_reg_epoch_loss_values_on_the_fly_fetal_easy.npz',
              epoch_loss_values=epoch_loss_values, epoch_loss_valid=epoch_loss_valid)
 
 
