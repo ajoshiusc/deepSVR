@@ -140,9 +140,9 @@ optimizerS = torch.optim.Adam(superres.parameters(), 1e-6)
 
 
 recon_image = superres(stacks)
-write_nifti(recon_image[0,0],f'outsvr_fast/deepsvr_recon_orig.nii.gz')
+write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_orig.nii.gz')
 
-write_nifti(image[0,0],'outsvr_fast/deepsvr_orig.nii.gz')
+write_nifti(image[0,0],'outsvr_fast_fetal/deepsvr_orig.nii.gz')
 
 stacks.to(device)
 
@@ -199,13 +199,13 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
 
-        torch.save(reg.state_dict(),'./outsvr_fast/epoch_reg_'+str(epoch)+'.pth')
-        torch.save(superres.state_dict(),'./outsvr_fast/epoch_superres_'+str(epoch)+'.pth')
+        torch.save(reg.state_dict(),'./outsvr_fast_fetal/epoch_reg_'+str(epoch)+'.pth')
+        torch.save(superres.state_dict(),'./outsvr_fast_fetal/epoch_superres_'+str(epoch)+'.pth')
 
     #vol_loss.backward()
 
 
-        write_nifti(recon_image[0,0],f'outsvr_fast/deepsvr_recon_{epoch}.nii.gz')
+        write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_{epoch}.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
