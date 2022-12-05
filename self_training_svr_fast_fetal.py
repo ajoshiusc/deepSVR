@@ -131,9 +131,11 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
-reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
+#reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
+reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_5370.pth'))
 reg.train()
-superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'));
+#superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'))
+superres.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_2600.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-6)
 optimizerS = torch.optim.Adam(superres.parameters(), 1e-6)
