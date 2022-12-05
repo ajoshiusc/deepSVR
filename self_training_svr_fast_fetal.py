@@ -148,7 +148,7 @@ write_nifti(image[0,0],'outsvr_fast_fetal/deepsvr_orig.nii.gz')
 
 stacks.to(device)
 
-max_epochs = 5
+max_epochs = 5000000
 for epoch in range(max_epochs):
 
     vol_loss = 0
