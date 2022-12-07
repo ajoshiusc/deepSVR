@@ -145,6 +145,12 @@ recon_image = superres(stacks)
 write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_orig.nii.gz')
 
 write_nifti(image[0,0],'outsvr_fast_fetal/deepsvr_orig.nii.gz')
+write_nifti(stacks[0,0],'outsvr_fast_fetal/deepsvr_stack0.nii.gz')
+write_nifti(stacks[0,1],'outsvr_fast_fetal/deepsvr_stack1.nii.gz')
+write_nifti(stacks[0,2],'outsvr_fast_fetal/deepsvr_stack2.nii.gz')
+write_nifti(stacks[0,3],'outsvr_fast_fetal/deepsvr_stack3.nii.gz')
+write_nifti(stacks[0,4],'outsvr_fast_fetal/deepsvr_stack4.nii.gz')
+write_nifti(stacks[0,5],'outsvr_fast_fetal/deepsvr_stack5.nii.gz')
 
 stacks.to(device)
 
