@@ -167,10 +167,12 @@ slice_vols_batch_z1 = stacks2batchvol(stacks[0,4],dir=2,device=device)
 slice_vols_batch_z2 = stacks2batchvol(stacks[0,5],dir=3,device=device)
 
 slice_vols_batch = torch.cat((slice_vols_batch_x1,slice_vols_batch_x2,slice_vols_batch_y1,slice_vols_batch_y2,slice_vols_batch_z1,slice_vols_batch_z2),dim=0)
+del slice_vols_batch_z1, slice_vols_batch_x1, slice_vols_batch_y1
+del slice_vols_batch_z2, slice_vols_batch_x2, slice_vols_batch_y2
 
 num_slices = slice_vols_batch.shape[0]
 
-
+sub_batch_size = 12
 max_epochs = 5000000
 for epoch in range(max_epochs):
 
@@ -180,9 +182,10 @@ for epoch in range(max_epochs):
 
     recon_image = superres(stacks)
 
-    recon_image = recon_image.repeat([num_slices,1,1,1,1])
-    
-    ddf = reg(torch.cat((recon_image, slice_vols_batch), dim=1))
+    recon_image = recon_image.repeat([sub_batch_size,1,1,1,1])
+    slice_vols_sub_batch = slice_vols_batch[0:sub_batch_size,:,:,:,:]
+    input_data = torch.cat((recon_image, slice_vols_sub_batch), dim=1)
+    ddf = reg(input_data)
     recon_image_moved = warp_layer(recon_image, ddf)
 
 
@@ -191,7 +194,7 @@ for epoch in range(max_epochs):
     #temp2 = resize_x(recon_image_moved_dict)
     #temp2 = resize_up(temp)
     
-    slice_loss = image_loss(recon_image_moved, slice_vols_batch)
+    slice_loss = image_loss(recon_image_moved, slice_vols_sub_batch)
 
     slice_loss.backward()
     optimizerR.step()
