@@ -13,6 +13,25 @@ import torch
 PRE_ALIGNED_STACKS = False
 
 
+def stacks2batchvol(stack, dir=0, device='cpu'):
+
+    batch_size = int(64/2)
+    slice_vols = torch.zeros((batch_size, 1, 64, 64, 64),device=device)#.to(device)
+
+    for sliceno in range(int(64/2)):
+
+        slice_ind = torch.tensor(range(2*sliceno, 2*(sliceno+1)))
+
+        if dir==0:
+            slice_vols[sliceno, :, slice_ind, :, :] = stack[sliceno, :, :]#.to(device)
+        elif dir==1:
+            slice_vols[sliceno, :, :, slice_ind, :] = stack[:, slice_ind, :]#.to(device)
+        elif dir==2:
+            slice_vols[sliceno, :, :, :, slice_ind] = stack[:, :, slice_ind]#.to(device)
+
+    return slice_vols
+
+
 class RandMakeStack(Randomizable, Transform):
     def __init__(self, stack_axis: int = 0) -> None:
         self.stack_axis = stack_axis
