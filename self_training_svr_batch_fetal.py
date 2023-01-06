@@ -136,6 +136,7 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
+
 reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
 #reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_5370.pth'))
 reg.train()
