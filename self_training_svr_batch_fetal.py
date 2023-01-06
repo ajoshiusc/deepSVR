@@ -164,7 +164,7 @@ slice_vols_batch_x2 = stacks2batchvol(stacks[0,1],dir=0,device=device)
 slice_vols_batch_y1 = stacks2batchvol(stacks[0,2],dir=1,device=device)
 slice_vols_batch_y2 = stacks2batchvol(stacks[0,3],dir=1,device=device)
 slice_vols_batch_z1 = stacks2batchvol(stacks[0,4],dir=2,device=device)
-slice_vols_batch_z2 = stacks2batchvol(stacks[0,5],dir=3,device=device)
+slice_vols_batch_z2 = stacks2batchvol(stacks[0,5],dir=2,device=device)
 
 slice_vols_batch = torch.cat((slice_vols_batch_x1,slice_vols_batch_x2,slice_vols_batch_y1,slice_vols_batch_y2,slice_vols_batch_z1,slice_vols_batch_z2),dim=0)
 del slice_vols_batch_z1, slice_vols_batch_x1, slice_vols_batch_y1
@@ -177,43 +177,44 @@ max_epochs = 5000000
 for epoch in range(max_epochs):
 
     vol_loss = 0
-    optimizerS.zero_grad()
-    optimizerR.zero_grad()
+    #optimizerS.zero_grad()
+    #optimizerR.zero_grad()
 
-    recon_image = superres(stacks)
-
-    recon_image = recon_image.repeat([sub_batch_size,1,1,1,1])
-    slice_vols_sub_batch = slice_vols_batch[0:sub_batch_size,:,:,:,:]
-    input_data = torch.cat((recon_image, slice_vols_sub_batch), dim=1)
-    ddf = reg(input_data)
-    recon_image_moved = warp_layer(recon_image, ddf)
-
-
-    #recon_image_moved_dict = [{"image": item} for item in recon_image_moved]
-
-    #temp2 = resize_x(recon_image_moved_dict)
-    #temp2 = resize_up(temp)
     
-    slice_loss = image_loss(recon_image_moved, slice_vols_sub_batch)
+    for i in range(0,192,sub_batch_size):
+        optimizerS.zero_grad()
+        optimizerR.zero_grad()
 
-    slice_loss.backward()
-    optimizerR.step()
+        recon_image = superres(stacks)
+        recon_image = recon_image.repeat([sub_batch_size,1,1,1,1])
 
-    vol_loss += slice_loss
+        s = slice_vols_batch[i:i+sub_batch_size,:,:,:,:]
+        input_data = torch.cat((recon_image, s), dim=1)
+        ddf = reg(input_data)
+        recon_image_moved = warp_layer(recon_image, ddf)
+
+
+        #recon_image_moved_dict = [{"image": item} for item in recon_image_moved]
+
+        #temp2 = resize_x(recon_image_moved_dict)
+        #temp2 = resize_up(temp)
+        
+        slice_loss = image_loss(recon_image_moved, s)
+
+        slice_loss.backward()
+        optimizerR.step()
+
+        vol_loss += slice_loss
     optimizerS.step()
 
+    print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
 
     if np.mod(epoch, 100) == 0:
 
         torch.save(reg.state_dict(),'./outsvr_fast_fetal/epoch_reg_batch_'+str(epoch)+'.pth')
         torch.save(superres.state_dict(),'./outsvr_fast_fetal/epoch_superres_batch_'+str(epoch)+'.pth')
-
-    #vol_loss.backward()
-
-
         write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_batch_{epoch}.nii.gz')
 
-    print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
     
 
