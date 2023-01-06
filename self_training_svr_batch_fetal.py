@@ -92,9 +92,11 @@ train_ds = CacheDataset(data=training_datadict, transform=randstack_transforms,
                         cache_rate=1.0, num_workers=4)
 train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 
-resize_x = Compose([ Resized(keys=["image"],spatial_size=[32, 64, 64])]) 
-#                   EnsureChannelFirstD(keys=["image"]), Resized(keys=["image"],spatial_size=[64, 64, 64])])
+#resize_x = Compose([EnsureChannelFirstD(keys=["image"]), Resized(keys=["image"],size_mode='all',spatial_size=[32, 64, 64])]) 
+#                    Resized(keys=["image"],spatial_size=[64, 64, 64])])
+#resize_x = Resized(keys=["image"],size_mode='all',spatial_size=[32, 64, 64])
 
+resize_x_down = Resize(spatial_size=[32, 64, 64])
 resize_y_down = Resize(spatial_size=[64, 32, 64])
 resize_z_down = Resize(spatial_size=[64, 64, 32])
 resize_up = Resize(spatial_size=[64, 64, 64])
@@ -180,10 +182,10 @@ for epoch in range(max_epochs):
     vol_loss = 0
     #optimizerS.zero_grad()
     #optimizerR.zero_grad()
+    optimizerS.zero_grad()
 
     
     for i in range(0,192,sub_batch_size):
-        optimizerS.zero_grad()
         optimizerR.zero_grad()
 
         recon_image = superres(stacks)
@@ -195,7 +197,16 @@ for epoch in range(max_epochs):
         recon_image_moved = warp_layer(recon_image, ddf)
 
 
-        #recon_image_moved_dict = [{"image": item} for item in recon_image_moved]
+
+        #for i in range(sub_batch_size):
+        #    recon_image_moved[i] = resize_up(resize_x_down(recon_image_moved[i]))
+
+        #recon_image_moved = [resize_x_down(resize_up(item)) for item in recon_image_moved]
+
+        #recon_image_moved = [Resize(spatial_size=[64,64,64])(Resize(spatial_size=[32,64,64])(item)) for item in recon_image_moved]
+
+        #recon_image_moved_dict = [{"image": item} for item in recon_image_moved[:,:,:,:,:]]
+        #recon_image_moved_dict = [dict(zip("image", item)) for item in recon_image_moved[:,:,:,:,:]]
 
         #temp2 = resize_x(recon_image_moved_dict)
         #temp2 = resize_up(temp)
@@ -206,7 +217,9 @@ for epoch in range(max_epochs):
         optimizerR.step()
 
         vol_loss += slice_loss
+
     optimizerS.step()
+
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
 
