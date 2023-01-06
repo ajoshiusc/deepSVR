@@ -217,9 +217,7 @@ for epoch in range(max_epochs):
         optimizerR.step()
 
         vol_loss += slice_loss
-
     optimizerS.step()
-
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
 
