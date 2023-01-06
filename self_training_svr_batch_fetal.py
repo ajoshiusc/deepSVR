@@ -97,6 +97,9 @@ train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=2)
 #resize_x = Resized(keys=["image"],size_mode='all',spatial_size=[32, 64, 64])
 
 resize_x_down = Resize(spatial_size=[32, 64, 64])
+resize_x_downD = Resized(keys=None,spatial_size=[32, 64, 64])
+resize_upD = Resized(keys=None,spatial_size=[64, 64, 64])
+
 resize_y_down = Resize(spatial_size=[64, 32, 64])
 resize_z_down = Resize(spatial_size=[64, 64, 32])
 resize_up = Resize(spatial_size=[64, 64, 64])
@@ -175,17 +178,17 @@ del slice_vols_batch_z2, slice_vols_batch_x2, slice_vols_batch_y2
 
 num_slices = slice_vols_batch.shape[0]
 
-sub_batch_size = 12
+sub_batch_size = 8
 max_epochs = 5000000
 for epoch in range(max_epochs):
 
     vol_loss = 0
     #optimizerS.zero_grad()
     #optimizerR.zero_grad()
-    optimizerS.zero_grad()
 
     
     for i in range(0,192,sub_batch_size):
+        optimizerS.zero_grad()
         optimizerR.zero_grad()
 
         recon_image = superres(stacks)
@@ -195,6 +198,24 @@ for epoch in range(max_epochs):
         input_data = torch.cat((recon_image, s), dim=1)
         ddf = reg(input_data)
         recon_image_moved = warp_layer(recon_image, ddf)
+
+
+
+        if i<64:
+            d = (recon_image_moved[:,:,::2,:,:] + recon_image_moved[:,:,1::2,:,:])/2.0
+            recon_image_moved[:,:,::2,:,:] = d
+            recon_image_moved[:,:,1::2,:,:] = d
+        
+        elif i<128:
+            d = (recon_image_moved[:,:,:,::2,:] + recon_image_moved[:,:,:,1::2,:])/2.0
+            recon_image_moved[:,:,:,::2,:] = d
+            recon_image_moved[:,:,:,1::2,:] = d
+        
+        else:
+            d = (recon_image_moved[:,:,:,:,::2] + recon_image_moved[:,:,:,:,1::2])/2.0
+            recon_image_moved[:,:,:,:,::2] = d
+            recon_image_moved[:,:,:,:,1::2] = d
+        
 
 
 
@@ -217,7 +238,7 @@ for epoch in range(max_epochs):
         optimizerR.step()
 
         vol_loss += slice_loss
-    optimizerS.step()
+        optimizerS.step()
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
 
