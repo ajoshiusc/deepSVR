@@ -122,9 +122,9 @@ def tv_loss(img):
     - loss: PyTorch Variable holding a scalar giving the total variation loss
       for img weighted by tv_weight.
     """
-    w_variance = torch.sum(torch.pow(img[:,:,:,:,:-1] - img[:,:,:,:,1:], 2))
-    h_variance = torch.sum(torch.pow(img[:,:,:,:-1,:] - img[:,:,:,1:,:], 2))
-    d_variance = torch.sum(torch.pow(img[:,:,:-1,:,:] - img[:,:,1:,:,:], 2))
+    w_variance = torch.sum(torch.abs(img[:,:,:,:,:-1] - img[:,:,:,:,1:]))
+    h_variance = torch.sum(torch.abs(img[:,:,:,:-1,:] - img[:,:,:,1:,:]))
+    d_variance = torch.sum(torch.abs(img[:,:,:-1,:,:] - img[:,:,1:,:,:]))
     loss =  (h_variance + w_variance + d_variance)
     return loss
 
@@ -190,12 +190,14 @@ write_nifti(stacks[0,4],'outsvr_fast_fetal/deepsvr_stack4.nii.gz')
 write_nifti(stacks[0,5],'outsvr_fast_fetal/deepsvr_stack5.nii.gz')
 
 stacks.to(device)
-tv_weight=.1
+
+tv_weight=.01
 max_epochs = 5000000
 for epoch in range(max_epochs):
 
     vol_loss = 0
     optimizerS.zero_grad()
+    recon_image = superres()
 
     for d in tqdm(range(6)):
 
@@ -208,7 +210,6 @@ for epoch in range(max_epochs):
 
             optimizerR.zero_grad()
 
-            recon_image = superres()
             slice_vol = torch.zeros(batch_size, 1, 64, 64, 64,device=device)#.to(device)
 
             if int(d/2)==0:
@@ -234,13 +235,13 @@ for epoch in range(max_epochs):
                 temp2 = resize_up(temp)
 
             slice_loss = image_loss(temp2, slice_vol[0]) 
+            vol_loss += slice_loss
 
             slice_loss.backward()
             optimizerR.step()
 
-            vol_loss += slice_loss
 
-    tv = 0.01*tv_loss(recon_image)
+    tv = tv_weight*tv_loss(recon_image)
     tv.backward()
     #vol_loss = vol_loss + tv
 
@@ -248,13 +249,9 @@ for epoch in range(max_epochs):
 
     if np.mod(epoch, 10) == 0:
 
-        torch.save(reg.state_dict(),'./outsvr_fast_fetal/epoch_reg_'+str(epoch)+'.pth')
-        torch.save(superres.state_dict(),'./outsvr_fast_fetal/epoch_superres_'+str(epoch)+'.pth')
-
-    #vol_loss.backward()
 
 
-        write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_{epoch}.nii.gz')
+        write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_{epoch}_l1.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
