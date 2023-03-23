@@ -168,7 +168,7 @@ for epoch in range(start_epoch+1, max_epochs):
 
             ddf = model(torch.cat((image_vol, slice_vol[:,0:1]), dim=1))
             pred_imagex = warp_layer(image_vol, ddf)
-            temp = resize_x_down(pred_imagex[0])
+            temp = resize_x_down(pred_imagex[0]) # this [0] is probably incoorrect!!!!!
             temp2 = resize_up(temp)
             slice_loss = image_loss(temp2, slice_vol[:,0:1])
             slice_loss.backward()

@@ -126,7 +126,8 @@ else:
 def masked_mse(moving, slicevol):
     msk = slicevol > 0
     err = (moving-slicevol)*msk
-    loss = torch.sqrt(torch.sum(err**2))
+    #loss = torch.sqrt(torch.sum(err**2))
+    loss = torch.sum(err**2)
     return loss
     
 image_loss = masked_mse
@@ -142,10 +143,10 @@ superres = unet.UNet(
     num_res_units=3).to(device)
 
 
-reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
+reg.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/reg/epoch_3980.pth'));
 #reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_5370.pth'))
 reg.train()
-superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'))
+superres.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/epoch_2020.pth'))
 #superres.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_unet_large_lrem4_hcp_easy/epoch_2600.pth'));
 superres.train()
 optimizerR = torch.optim.Adam(reg.parameters(), 1e-6)
@@ -179,16 +180,16 @@ del slice_vols_batch_z2, slice_vols_batch_x2, slice_vols_batch_y2
 num_slices = slice_vols_batch.shape[0]
 
 sub_batch_size = 8
-max_epochs = 5000000
+max_epochs = 5# 5000000
 for epoch in range(max_epochs):
 
     vol_loss = 0
     #optimizerS.zero_grad()
     #optimizerR.zero_grad()
 
-    
+    optimizerS.zero_grad()
+
     for i in range(0,192,sub_batch_size):
-        optimizerS.zero_grad()
         optimizerR.zero_grad()
 
         recon_image = superres(stacks)
@@ -238,7 +239,7 @@ for epoch in range(max_epochs):
         optimizerR.step()
 
         vol_loss += slice_loss
-        optimizerS.step()
+    optimizerS.step()
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
 
