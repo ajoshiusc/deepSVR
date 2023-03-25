@@ -1,5 +1,5 @@
 import nilearn.image as ni
-
+import numpy as np
 import glob
 
 
@@ -22,4 +22,17 @@ for i, s in enumerate(stacks):
     v = v.slicer[offsets]
     v.to_filename(f'stack{i}.nii.gz')
 
+
     print(v.shape)
+
+
+    print(v.shape)
+
+    xcent = int(np.round(v.shape[0]/2))
+    ycent = int(np.round(v.shape[1]/2))
+    zcent = int(np.round(v.shape[2]/2))
+
+    offsets2 = tuple([slice(xcent-32,xcent+32),slice(ycent-32,ycent+32),slice(zcent-16,zcent+16)])
+    v2 = v.slicer[offsets2]
+    v2.to_filename(f'stack{i}_64.nii.gz')
+
