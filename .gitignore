@@ -1,3 +1,6 @@
+*.pth
+*.npz
+*.dof
 feta_2.2*
 *.nii.gz
 feta_syn_data*/*
