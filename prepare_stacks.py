@@ -1,7 +1,7 @@
 import nilearn.image as ni
 import numpy as np
 import glob
-
+import nibabel as nb
 
 msk = '/deneb_disk/fetal_scan_1_9_2023/morning/nii_files_rot/sample_real_data/fetal_scan_1_9_2023_morning_12_stacks/p28_t2_haste_sag_head_p_mask.nii.gz'
 
@@ -21,6 +21,7 @@ for i, s in enumerate(stacks):
     v = ni.load_img(s)
     v = v.slicer[offsets]
     v.to_filename(f'stack{i}.nii.gz')
+    nb.as_closest_canonical(v).to_filename(f'rstack{i}.nii.gz')
 
 
     print(v.shape)
@@ -34,5 +35,5 @@ for i, s in enumerate(stacks):
 
     offsets2 = tuple([slice(xcent-32,xcent+32),slice(ycent-32,ycent+32),slice(zcent-16,zcent+16)])
     v2 = v.slicer[offsets2]
+    #nb.as_closest_canonical(v2).to_filename(f'stack{i}_64.nii.gz')
     v2.to_filename(f'stack{i}_64.nii.gz')
-

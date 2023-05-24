@@ -35,16 +35,18 @@ sublist_full = glob('./feta_2.2/sub-*/anat/sub-*_T2w.nii.gz')
 
 
 # training files
-
-subfiles_train = [f'stack{i}_64.nii.gz' for i in (0,2,4,6,8,10)]
-
-
-training_datadict = [{"image": item} for item in subfiles_train]
-
+#x[1,4,5,8]
+#y[3,7,9,11]
+#z[0,2,6,10]
+subfiles_train = [f'rstack{i}.nii.gz' for i in (1,4,3,7,0,2)]
 
 
+training_datadict = [{f"image": item} for item in subfiles_train]
 
-randstack_transforms = Compose(
+
+
+
+randstack_transforms_old = Compose(
     [
         LoadImageD(keys=["image"]),
         EnsureChannelFirstD(keys=["image"]),
@@ -58,6 +60,22 @@ randstack_transforms = Compose(
 )
 
 
+
+randstack_transforms = Compose(
+    [
+        LoadImageD(keys=["image"]),
+        EnsureChannelFirstD(keys=["image"]),
+        Resized(keys=["image"], spatial_size=[64, 64, 64]),
+        ScaleIntensityRangePercentilesd(keys=["image"], lower=2, upper=98, b_min=0.0, _max=10.0, clip=True),
+        CopyItemsd(keys=["image"], names=["stack0"]),
+        #LoadImageD(keys=["image"]),
+        #EnsureChannelFirstD(keys=["image"]),
+        #CopyItemsd(keys=["image"], names=["stack1"]),
+
+        #ConcatItemsd(keys=["stack0", "stack1"], name='stacks'),
+        # Resized(keys=["image", "stack0", "stack1", "stack2","stack3","stack4","stack5"],spatial_size=[32,32,32]),
+    ]
+)
 
 
 """ 
@@ -84,7 +102,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 batch_data = first(train_loader)
 image = batch_data["image"].to(device)+.001
-stacks = batch_data["stacks"].to(device)+.001
+stacks = batch_data["image"].to(device)+.001
+stacks = torch.swapaxes(stacks,0,1)
+#stacks = batch_data["stacks"].to(device)+.001
 
 reg = GlobalNetRigid(
     image_size=(64, 64, 64),
@@ -133,11 +153,11 @@ superres = unet.UNet(
     up_kernel_size=5,
     num_res_units=3).to(device)
 
-reg.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/reg/epoch_3980.pth'));
-#superres.load_state_dict(torch.load('outsvr_fetal_easy/superres_epoch_2020.pth'));
-superres.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/epoch_2020.pth'))
+#reg.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/reg/epoch_3980.pth'));
+superres.load_state_dict(torch.load('/home/ajoshi/projects/deepSVR/trained_models/sup/epoch_2600.pth'));
+#superres.load_state_dict(torch.load('/ImagePTE1/ajoshi/code_farm/deepSVR/trained_models/epoch_2020.pth'))
 
-#reg.load_state_dict(torch.load('/home/ajoshi/Desktop/epoch_3980.pth'));
+reg.load_state_dict(torch.load('/home/ajoshi/projects/deepSVR/trained_models/reg/epoch_5370.pth'));
 #reg.load_state_dict(torch.load('/project/ajoshi_27/code_farm/deepSVR/model_64_slice2vol_reg/epoch_5370.pth'))
 reg.train()
 #superres.load_state_dict(torch.load('/home/ajoshi/epoch_2020.pth'))
@@ -165,15 +185,15 @@ optimizerS = torch.optim.Adam(superres.parameters(), 1e-1)
 
 
 
-write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_orig.nii.gz')
+write_nifti(recon_image[0,0],f'outsvr_fast_fetal_real_data/deepsvr_recon_orig.nii.gz')
 
-write_nifti(image[0,0],'outsvr_fast_fetal/deepsvr_orig.nii.gz')
-write_nifti(stacks[0,0],'outsvr_fast_fetal/deepsvr_stack0.nii.gz')
-write_nifti(stacks[0,1],'outsvr_fast_fetal/deepsvr_stack1.nii.gz')
-write_nifti(stacks[0,2],'outsvr_fast_fetal/deepsvr_stack2.nii.gz')
-write_nifti(stacks[0,3],'outsvr_fast_fetal/deepsvr_stack3.nii.gz')
-write_nifti(stacks[0,4],'outsvr_fast_fetal/deepsvr_stack4.nii.gz')
-write_nifti(stacks[0,5],'outsvr_fast_fetal/deepsvr_stack5.nii.gz')
+write_nifti(image[0,0],'outsvr_fast_fetal_real_data/deepsvr_orig.nii.gz')
+write_nifti(stacks[0,0],'outsvr_fast_fetal_real_data/deepsvr_stack0.nii.gz')
+write_nifti(stacks[0,1],'outsvr_fast_fetal_real_data/deepsvr_stack1.nii.gz')
+write_nifti(stacks[0,2],'outsvr_fast_fetal_real_data/deepsvr_stack2.nii.gz')
+write_nifti(stacks[0,3],'outsvr_fast_fetal_real_data/deepsvr_stack3.nii.gz')
+write_nifti(stacks[0,4],'outsvr_fast_fetal_real_data/deepsvr_stack4.nii.gz')
+write_nifti(stacks[0,5],'outsvr_fast_fetal_real_data/deepsvr_stack5.nii.gz')
 
 stacks.to(device)
 
@@ -199,12 +219,11 @@ for epoch in range(max_epochs):
             slice_vol = torch.zeros(batch_size, 1, 64, 64, 64,device=device)#.to(device)
 
             if int(d/2)==0:
-                slice_vol[0, :, slice_ind, :, :] = stacks[0, d, slice_ind, :, :]#.to(device)
-
+                slice_vol[0, :, slice_ind, :, :] = stacks[0, d, slice_ind, :, :]#stacks[0, d, :, :, slice_ind].swapaxes(-1,-3) #
             elif int(d/2)==1:
-                slice_vol[0, :, :, slice_ind, :] = stacks[0, d, :, slice_ind, :]#.to(device)
+                slice_vol[0, :, :, slice_ind, :] = stacks[0, d, :, :, slice_ind, :]#stacks[0, d, :, :, slice_ind].swapaxes(-1,-2) #
             elif int(d/2)==2:
-                slice_vol[0, :, :, :, slice_ind] = stacks[0, d, :, :, slice_ind]#.to(device)
+                slice_vol[0, :, :, :, slice_ind] = stacks[0, d, :, :, slice_ind] #.to(device)
 
 
             ddf = reg(torch.cat((recon_image, slice_vol), dim=1))
@@ -237,7 +256,7 @@ for epoch in range(max_epochs):
 
 
 
-        write_nifti(recon_image[0,0],f'outsvr_fast_fetal/deepsvr_recon_{epoch}_l1.nii.gz')
+        write_nifti(recon_image[0,0],f'outsvr_fast_fetal_real_data/deepsvr_recon_{epoch}_l1.nii.gz')
 
     print(f'epoch_loss:{vol_loss} for epoch:{epoch}')    
    
