@@ -6,6 +6,9 @@ from nibabel.processing import resample_to_output
 
 import torch
 import torchvision.transforms.functional as TF
+from nilearn.image import resample_img
+
+from scipy.ndimage import zoom
 
 
 SZ = 96
@@ -17,21 +20,21 @@ def resize_3d_image(image, direction):
     dx, dy, dz = image.shape
     if direction == 0:
         padding = (
-            (0, 0),
+            ((SZ//2 - dx) // 2, (SZ//2 - dx) - (SZ//2 - dx) // 2),
             ((SZ - dy) // 2, (SZ - dy) - (SZ - dy) // 2),
             ((SZ - dz) // 2, (SZ - dz) - (SZ - dz) // 2),
         )
     elif direction == 1:
         padding = (
             ((SZ - dx) // 2, (SZ - dx) - (SZ - dx) // 2),
-            (0, 0),
+            ((SZ//2 - dy) // 2, (SZ//2 - dy) - (SZ//2 - dy) // 2),
             ((SZ - dz) // 2, (SZ - dz) - (SZ - dz) // 2),
         )
     else:
         padding = (
             ((SZ - dx) // 2, (SZ - dx) - (SZ - dx) // 2),
             ((SZ - dy) // 2, (SZ - dy) - (SZ - dy) // 2),
-            (0, 0),
+            ((SZ//2 - dz) // 2, (SZ//2 - dz) - (SZ//2 - dz) // 2),
         )
     # Pad or crop the image based on the specified direction
     padded_image = np.pad(image, padding)
@@ -81,20 +84,22 @@ for i, s in enumerate(stacks):
     slice_axis = np.argmax(res)
     target_voxel_size[slice_axis] = 3.0
 
-    scaling_factors = np.diag(target_voxel_size) / np.diag(vc.affine[:3, :3])
-    target_affine = np.copy(vc.affine)
-    target_affine[:3, :3] = vc.affine[:3, :3] * scaling_factors
+    scaling_factors = target_voxel_size / res #np.diag(vc.affine[:3, :3])
 
-    v = nb.Nifti1Image(dataobj=vc.get_fdata(), affine=target_affine, header=vc.header)
+    img = vc.get_fdata()
+    img = zoom(img,zoom = 1.0/scaling_factors, order = 1)
+    target_affine = np.diag(target_voxel_size) #np.copy(vc.affine)
+    #target_affine[:3, :3] = vc.affine[:3, :3] * scaling_factors
+
+    #v = resample_img(vc,target_affine=target_affine)
+
+    v = nb.Nifti1Image(dataobj=img, affine=np.diag(np.concatenate((target_voxel_size, [0]))), header=vc.header)
+
 
     v.to_filename(f"cstack{i}.nii.gz")
 
     img = resize_3d_image(v.get_fdata(), slice_axis)
 
-    hdr = nb.Nifti1Header()
-    hdr.set_data_shape(img.shape)
-    hdr.set_zooms(target_voxel_size)  # set voxel size
-    hdr.set_xyzt_units(2)
     vp = nb.Nifti1Image(
         dataobj=img, affine=np.diag(np.concatenate((target_voxel_size, [0])))
     )
